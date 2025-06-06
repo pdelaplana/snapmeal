@@ -43,27 +43,31 @@ export default function AddMealPage() {
       const result = await estimateCaloriesMacros({ photoDataUri, mealDescription });
       setEstimation(result); // Store the full AI response
 
-      if (result.isMealDetected && result.estimatedCalories !== undefined && result.macroBreakdown !== undefined) {
+      if (result.isMealDetected && result.estimatedCalories != null && result.macroBreakdown != null) {
         toast({ title: 'Estimation Complete', description: 'Nutritional values have been estimated.' });
-      } else {
+      } else if (!result.isMealDetected) {
         toast({ variant: 'destructive', title: 'Meal Not Detected', icon: <AlertTriangle className="h-5 w-5" />, description: 'The AI could not detect a meal in the photo. Please try a different image or add a description.' });
+      } else {
+        // This case might happen if isMealDetected is true but estimation fields are null/undefined
+        // which shouldn't happen with the current AI logic but good to be aware of.
+        toast({ variant: 'destructive', title: 'Estimation Incomplete', icon: <AlertTriangle className="h-5 w-5" />, description: 'The AI detected a meal but could not provide full nutritional estimates.' });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error estimating calories:', error);
-      toast({ variant: 'destructive', title: 'Estimation Failed', description: 'Could not estimate nutrition. Please try again.' });
+      toast({ variant: 'destructive', title: 'Estimation Failed', description: error.message || 'Could not estimate nutrition. Please try again.' });
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleLogMeal = () => {
-    if (!photoDataUri || !estimation || !estimation.isMealDetected || estimation.estimatedCalories === undefined || !estimation.macroBreakdown) {
+    if (!photoDataUri || !estimation || !estimation.isMealDetected || estimation.estimatedCalories == null || !estimation.macroBreakdown) {
       toast({ variant: 'destructive', title: 'Cannot Log Meal', description: 'Please capture a photo and get a valid estimation first.' });
       return;
     }
     addMeal({
       photoDataUri,
-      estimatedCalories: estimation.estimatedCalories, // Now type-safe due to the check
+      estimatedCalories: estimation.estimatedCalories, 
       protein: estimation.macroBreakdown.protein,
       carbs: estimation.macroBreakdown.carbs,
       fat: estimation.macroBreakdown.fat,
@@ -73,7 +77,7 @@ export default function AddMealPage() {
     router.push('/dashboard');
   };
   
-  const canLogMeal = estimation && estimation.isMealDetected && estimation.estimatedCalories !== undefined && estimation.macroBreakdown !== undefined && photoDataUri;
+  const canLogMeal = estimation && estimation.isMealDetected && estimation.estimatedCalories != null && estimation.macroBreakdown != null && photoDataUri;
 
   return (
     <AppLayout>
@@ -149,5 +153,4 @@ export default function AddMealPage() {
     </AppLayout>
   );
 }
-
     

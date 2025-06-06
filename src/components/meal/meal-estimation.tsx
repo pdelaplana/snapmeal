@@ -31,15 +31,14 @@ export default function MealEstimation({ estimation, isLoading }: MealEstimation
     return null; 
   }
 
-  if (!estimation.isMealDetected || estimation.estimatedCalories === undefined || !estimation.macroBreakdown) {
-    // If an estimation object exists but no meal was detected or data is missing,
-    // we don't show the nutrition card. The parent page already shows a toast.
-    // Optionally, you could show a specific message here too.
-    // For now, returning null keeps it clean as the toast handles the user feedback.
+  // Check if a meal was detected and if the necessary estimation data is present (not null or undefined)
+  if (!estimation.isMealDetected || estimation.estimatedCalories == null || !estimation.macroBreakdown) {
+    // If no meal was detected, or if estimation data is missing, don't show the nutrition card.
+    // The parent page (AddMealPage) is responsible for showing a toast notification in these cases.
     return null;
   }
 
-  const { estimatedCalories, macroBreakdown } = estimation; // These are now guaranteed to exist due to the check above
+  const { estimatedCalories, macroBreakdown } = estimation; // These are now guaranteed to be non-null
   const totalMacros = macroBreakdown.protein + macroBreakdown.carbs + macroBreakdown.fat;
   const proteinPercentage = totalMacros > 0 ? (macroBreakdown.protein / totalMacros) * 100 : 0;
   const carbsPercentage = totalMacros > 0 ? (macroBreakdown.carbs / totalMacros) * 100 : 0;
@@ -88,5 +87,4 @@ export default function MealEstimation({ estimation, isLoading }: MealEstimation
     </Card>
   );
 }
-
     
