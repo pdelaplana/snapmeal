@@ -1,7 +1,7 @@
 
 "use client";
 
-import type { User, UserMetadata } from 'firebase/auth'; // UserMetadata might be needed for full User type
+import type { User, UserMetadata } from 'firebase/auth';
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import type { ReactNode } from 'react';
 
@@ -19,9 +19,9 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
-  loading: true, // Will be set to false after initial check
-  mockLogin: () => {},
-  mockSignOut: () => {},
+  loading: true,
+  mockLogin: () => { console.warn("Default mockLogin called"); }, // Ensure it's a function
+  mockSignOut: () => { console.warn("Default mockSignOut called"); }, // Ensure it's a function
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -37,7 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAnonymous: false,
       metadata: { creationTime: now, lastSignInTime: now } as UserMetadata,
       providerData: [{
-        providerId: 'password', // or 'mock-provider'
+        providerId: 'password', 
         uid: 'mock-provider-uid-' + email,
         displayName: email.split('@')[0],
         email: email,
@@ -62,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       displayName: email.split('@')[0],
       phoneNumber: null,
       photoURL: null,
-      providerId: 'firebase', // Standard for email/password
+      providerId: 'firebase', 
     };
     setUser(mockUserData);
     setLoading(false);
