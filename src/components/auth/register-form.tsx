@@ -25,7 +25,7 @@ function SubmitButton() {
 // Define the expected shape of the state from registerUser action
 interface RegisterFormState {
   success: boolean;
-  email?: string; // Add email here
+  email?: string; 
   error?: {
     email?: string[];
     password?: string[];
@@ -36,19 +36,27 @@ interface RegisterFormState {
 export default function RegisterForm() {
   const router = useRouter();
   const { toast } = useToast();
-  const { mockLogin } = useAuth();
+  const { mockLogin, user: loggedInUserFromContext } = useAuth();
   const [state, formAction] = useActionState<RegisterFormState | undefined, FormData>(registerUser, undefined);
 
   useEffect(() => {
     if (state?.success && state.email) {
       toast({ title: "Registration Successful (Mocked)", description: `Welcome, ${state.email}! You are now logged in.` });
       mockLogin(state.email);
-      router.push("/dashboard");
+      // Navigation is handled in the effect below
     } else if (state?.error) {
       const errorMessages = Object.values(state.error).flat().join(", ");
       toast({ variant: "destructive", title: "Registration Failed (Mocked)", description: errorMessages });
     }
-  }, [state, router, toast, mockLogin]);
+  }, [state, toast, mockLogin]);
+
+  // Effect to handle navigation once the user is set in context after a successful action
+  useEffect(() => {
+    if (state?.success && state.email && loggedInUserFromContext?.email === state.email) {
+      // Check if the action was successful AND the context user matches the email from the action
+      router.push("/dashboard");
+    }
+  }, [state, loggedInUserFromContext, router]);
 
   return (
     <form action={formAction} className="space-y-6">
