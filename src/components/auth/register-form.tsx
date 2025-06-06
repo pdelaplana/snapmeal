@@ -1,6 +1,7 @@
 "use client";
 
-import { useFormState, useFormStatus } from "react-dom";
+import { useActionState, useEffect } from "react";
+import { useFormStatus } from "react-dom";
 import { registerUser } from "@/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,8 +9,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useEffect } from "react";
-import { Mail, Key, User } from "lucide-react";
+import { Mail, Key } from "lucide-react";
 
 
 function SubmitButton() {
@@ -24,7 +24,7 @@ function SubmitButton() {
 export default function RegisterForm() {
   const router = useRouter();
   const { toast } = useToast();
-  const [state, formAction] = useFormState(registerUser, undefined);
+  const [state, formAction] = useActionState(registerUser, undefined);
 
   useEffect(() => {
     if (state?.success) {
