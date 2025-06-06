@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useActionState, useEffect } from "react";
@@ -10,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Mail, Key } from "lucide-react";
+import { useAuth } from "@/context/auth-context";
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -20,20 +22,34 @@ function SubmitButton() {
   );
 }
 
+// Define the expected shape of the state from loginUser action
+interface LoginFormState {
+  success: boolean;
+  email?: string; // Add email here
+  error?: {
+    email?: string[];
+    password?: string[];
+    form?: string[];
+  };
+}
+
+
 export default function LoginForm() {
   const router = useRouter();
   const { toast } = useToast();
-  const [state, formAction] = useActionState(loginUser, undefined);
+  const { mockLogin } = useAuth();
+  const [state, formAction] = useActionState<LoginFormState | undefined, FormData>(loginUser, undefined);
 
   useEffect(() => {
-    if (state?.success) {
-      toast({ title: "Login Successful", description: "Welcome back!" });
+    if (state?.success && state.email) {
+      toast({ title: "Login Successful (Mocked)", description: `Welcome back, ${state.email}!` });
+      mockLogin(state.email);
       router.push("/dashboard");
     } else if (state?.error) {
       const errorMessages = Object.values(state.error).flat().join(", ");
-      toast({ variant: "destructive", title: "Login Failed", description: errorMessages });
+      toast({ variant: "destructive", title: "Login Failed (Mocked)", description: errorMessages });
     }
-  }, [state, router, toast]);
+  }, [state, router, toast, mockLogin]);
 
   return (
     <form action={formAction} className="space-y-6">

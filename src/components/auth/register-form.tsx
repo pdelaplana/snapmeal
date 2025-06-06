@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useActionState, useEffect } from "react";
@@ -10,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Mail, Key } from "lucide-react";
-
+import { useAuth } from "@/context/auth-context";
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -21,20 +22,33 @@ function SubmitButton() {
   );
 }
 
+// Define the expected shape of the state from registerUser action
+interface RegisterFormState {
+  success: boolean;
+  email?: string; // Add email here
+  error?: {
+    email?: string[];
+    password?: string[];
+    form?: string[];
+  };
+}
+
 export default function RegisterForm() {
   const router = useRouter();
   const { toast } = useToast();
-  const [state, formAction] = useActionState(registerUser, undefined);
+  const { mockLogin } = useAuth();
+  const [state, formAction] = useActionState<RegisterFormState | undefined, FormData>(registerUser, undefined);
 
   useEffect(() => {
-    if (state?.success) {
-      toast({ title: "Registration Successful", description: "Please login to continue." });
-      router.push("/login");
+    if (state?.success && state.email) {
+      toast({ title: "Registration Successful (Mocked)", description: `Welcome, ${state.email}! You are now logged in.` });
+      mockLogin(state.email);
+      router.push("/dashboard");
     } else if (state?.error) {
       const errorMessages = Object.values(state.error).flat().join(", ");
-      toast({ variant: "destructive", title: "Registration Failed", description: errorMessages });
+      toast({ variant: "destructive", title: "Registration Failed (Mocked)", description: errorMessages });
     }
-  }, [state, router, toast]);
+  }, [state, router, toast, mockLogin]);
 
   return (
     <form action={formAction} className="space-y-6">

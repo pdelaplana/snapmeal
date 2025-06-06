@@ -1,26 +1,24 @@
+
 "use client";
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Utensils, LogOut } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
-import { signOutUser } from "@/actions/auth";
+// import { signOutUser } from "@/actions/auth"; // Action not directly used here for mock
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 
 export default function SiteHeader() {
-  const { user } = useAuth();
+  const { user, mockSignOut } = useAuth(); // Use mockSignOut from context
   const router = useRouter();
   const { toast } = useToast();
 
   const handleSignOut = async () => {
-    const result = await signOutUser();
-    if (result.success) {
-      toast({ title: "Logged Out", description: "You have been successfully logged out." });
-      router.push("/login");
-    } else {
-      toast({ variant: "destructive", title: "Logout Failed", description: result.error });
-    }
+    // No need to call server action if client state is primary
+    mockSignOut(); // Call context's mockSignOut
+    toast({ title: "Logged Out (Mocked)", description: "You have been successfully logged out." });
+    router.push("/login");
   };
 
   return (

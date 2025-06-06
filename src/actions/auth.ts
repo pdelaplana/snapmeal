@@ -1,12 +1,12 @@
 
 "use server";
 
-import { auth } from "@/lib/firebase";
-import { 
-  createUserWithEmailAndPassword, 
-  signInWithEmailAndPassword,
-  signOut as firebaseSignOut
-} from "firebase/auth";
+// import { auth } from "@/lib/firebase"; // Not needed for mocked auth
+// import { 
+//   createUserWithEmailAndPassword, 
+//   signInWithEmailAndPassword,
+//   signOut as firebaseSignOut
+// } from "firebase/auth"; // Not needed for mocked auth
 import { z } from "zod";
 
 const emailPasswordSchema = z.object({
@@ -16,46 +16,38 @@ const emailPasswordSchema = z.object({
 
 export async function registerUser(prevState: any, formData: FormData) {
   const rawFormData = Object.fromEntries(formData.entries());
+  // Basic validation still useful even if not hitting Firebase
   const parsed = emailPasswordSchema.safeParse(rawFormData);
 
   if (!parsed.success) {
     return { success: false, error: parsed.error.flatten().fieldErrors };
   }
-
-  const { email, password } = parsed.data;
-
-  try {
-    await createUserWithEmailAndPassword(auth, email, password);
-    return { success: true };
-  } catch (error: any) {
-    return { success: false, error: { form: [error.message] } };
-  }
+  const email = parsed.data.email;
+  console.log("Mocking registerUser: email received", email);
+  // Simulate a slight delay
+  await new Promise(resolve => setTimeout(resolve, 500));
+  return { success: true, email: email };
 }
 
 export async function loginUser(prevState: any, formData: FormData) {
   const rawFormData = Object.fromEntries(formData.entries());
+  // Basic validation still useful
   const parsed = emailPasswordSchema.safeParse(rawFormData);
 
   if (!parsed.success) {
     return { success: false, error: parsed.error.flatten().fieldErrors };
   }
-
-  const { email, password } = parsed.data;
-
-  try {
-    await signInWithEmailAndPassword(auth, email, password);
-    return { success: true };
-  } catch (error: any)
-   {
-    return { success: false, error: { form: [error.message] } };
-  }
+  const email = parsed.data.email;
+  console.log("Mocking loginUser: email received", email);
+  // Simulate a slight delay
+  await new Promise(resolve => setTimeout(resolve, 500));
+  return { success: true, email: email };
 }
 
 export async function signOutUser() {
-  try {
-    await firebaseSignOut(auth);
-    return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
+  console.log("Mocking signOutUser action");
+  // Simulate a slight delay
+  await new Promise(resolve => setTimeout(resolve, 300));
+  // This server action's return value is less critical now as client state is managed by AuthContext.mockSignOut
+  return { success: true, message: "User signed out (mocked action)." };
 }
