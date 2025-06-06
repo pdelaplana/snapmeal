@@ -1,3 +1,4 @@
+
 "use server";
 
 import { auth } from "@/lib/firebase";
@@ -13,7 +14,7 @@ const emailPasswordSchema = z.object({
   password: z.string().min(6, { message: "Password must be at least 6 characters." }),
 });
 
-export async function registerUser(formData: FormData) {
+export async function registerUser(prevState: any, formData: FormData) {
   const rawFormData = Object.fromEntries(formData.entries());
   const parsed = emailPasswordSchema.safeParse(rawFormData);
 
@@ -31,7 +32,7 @@ export async function registerUser(formData: FormData) {
   }
 }
 
-export async function loginUser(formData: FormData) {
+export async function loginUser(prevState: any, formData: FormData) {
   const rawFormData = Object.fromEntries(formData.entries());
   const parsed = emailPasswordSchema.safeParse(rawFormData);
 
