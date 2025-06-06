@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -12,10 +13,12 @@ import type { EstimateCaloriesMacrosOutput } from '@/ai/flows/estimate-calories-
 import { useToast } from '@/hooks/use-toast';
 import { useMealLog } from '@/context/meal-log-context';
 import { useRouter } from 'next/navigation';
-import { Wand2, CheckCircle, Loader2 } from 'lucide-react';
+import { Wand2, CheckCircle, Loader2, Info } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function AddMealPage() {
   const [photoDataUri, setPhotoDataUri] = useState<string | null>(null);
+  const [mealDescription, setMealDescription] = useState('');
   const [estimation, setEstimation] = useState<EstimateCaloriesMacrosOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [notes, setNotes] = useState('');
@@ -26,6 +29,7 @@ export default function AddMealPage() {
   const handlePhotoCaptured = (dataUri: string) => {
     setPhotoDataUri(dataUri);
     setEstimation(null); // Clear previous estimation if new photo is captured
+    setMealDescription(''); // Clear description as well
   };
 
   const handleEstimate = async () => {
@@ -36,7 +40,7 @@ export default function AddMealPage() {
     setIsLoading(true);
     setEstimation(null);
     try {
-      const result = await estimateCaloriesMacros({ photoDataUri });
+      const result = await estimateCaloriesMacros({ photoDataUri, mealDescription });
       setEstimation(result);
       toast({ title: 'Estimation Complete', description: 'Nutritional values have been estimated.' });
     } catch (error) {
@@ -58,7 +62,7 @@ export default function AddMealPage() {
       protein: estimation.macroBreakdown.protein,
       carbs: estimation.macroBreakdown.carbs,
       fat: estimation.macroBreakdown.fat,
-      notes: notes,
+      notes: notes, // We keep 'notes' separate from 'mealDescription' for AI
     });
     toast({ title: 'Meal Logged!', description: 'Your meal has been added to your log.' });
     router.push('/dashboard');
@@ -76,20 +80,40 @@ export default function AddMealPage() {
           <MealCapture onPhotoCaptured={handlePhotoCaptured} />
 
           {photoDataUri && (
-            <div className="text-center">
-              <Button onClick={handleEstimate} disabled={isLoading || !photoDataUri} size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground">
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Estimating...
-                  </>
-                ) : (
-                  <>
-                    <Wand2 className="mr-2 h-5 w-5" />
-                    Estimate Calories & Macros
-                  </>
-                )}
-              </Button>
+            <div className="space-y-4 rounded-lg border bg-card p-6 shadow-md">
+              <div>
+                <Label htmlFor="mealDescription" className="text-md font-medium">
+                  Meal Description (Optional, for AI accuracy)
+                </Label>
+                <Textarea
+                  id="mealDescription"
+                  placeholder="e.g., 'Grilled chicken breast (approx 150g), half cup brown rice, steamed broccoli'. The more detail, the better the estimate!"
+                  value={mealDescription}
+                  onChange={(e) => setMealDescription(e.target.value)}
+                  className="mt-2 min-h-[80px]"
+                />
+                 <Alert variant="default" className="mt-3">
+                  <Info className="h-4 w-4" />
+                  <AlertDescription>
+                    Providing details like ingredients, cooking methods, or portion sizes can significantly improve the accuracy of the AI estimation.
+                  </AlertDescription>
+                </Alert>
+              </div>
+              <div className="text-center">
+                <Button onClick={handleEstimate} disabled={isLoading || !photoDataUri} size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground">
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      Estimating...
+                    </>
+                  ) : (
+                    <>
+                      <Wand2 className="mr-2 h-5 w-5" />
+                      Estimate Calories & Macros
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           )}
 
@@ -98,7 +122,7 @@ export default function AddMealPage() {
           {estimation && photoDataUri && (
             <div className="space-y-6 rounded-lg border bg-card p-6 shadow-md">
                <div>
-                <Label htmlFor="notes" className="text-md font-medium">Optional Notes</Label>
+                <Label htmlFor="notes" className="text-md font-medium">Optional Notes for Log</Label>
                 <Textarea
                   id="notes"
                   placeholder="e.g., homemade, restaurant dish, feelings after meal..."
