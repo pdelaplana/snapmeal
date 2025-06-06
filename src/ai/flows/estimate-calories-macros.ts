@@ -3,6 +3,7 @@
 
 /**
  * @fileOverview AI agent that estimates the calorie count and macro breakdown of a meal from a photo and an optional description.
+ * It also determines if a meal is detected in the photo.
  *
  * - estimateCaloriesMacros - A function that handles the estimation process.
  * - EstimateCaloriesMacrosInput - The input type for the estimateCaloriesMacros function.
@@ -25,13 +26,14 @@ const EstimateCaloriesMacrosInputSchema = z.object({
 });
 export type EstimateCaloriesMacrosInput = z.infer<typeof EstimateCaloriesMacrosInputSchema>;
 
-const EstimateCaloriesMacrosOutputSchema = z.object({
-  estimatedCalories: z.number().describe('The estimated calorie count of the meal.'),
+export const EstimateCaloriesMacrosOutputSchema = z.object({
+  isMealDetected: z.boolean().describe('Whether a meal was detected in the photo.'),
+  estimatedCalories: z.number().optional().describe('The estimated calorie count of the meal. Provided only if a meal is detected.'),
   macroBreakdown: z.object({
     protein: z.number().describe('The estimated protein content of the meal in grams.'),
     carbs: z.number().describe('The estimated carbohydrate content of the meal in grams.'),
     fat: z.number().describe('The estimated fat content of the meal in grams.'),
-  }).describe('The estimated macro breakdown of the meal.'),
+  }).optional().describe('The estimated macro breakdown of the meal. Provided only if a meal is detected.'),
 });
 export type EstimateCaloriesMacrosOutput = z.infer<typeof EstimateCaloriesMacrosOutputSchema>;
 
@@ -43,25 +45,40 @@ const estimateCaloriesMacrosPrompt = ai.definePrompt({
   name: 'estimateCaloriesMacrosPrompt',
   input: {schema: EstimateCaloriesMacrosInputSchema},
   output: {schema: EstimateCaloriesMacrosOutputSchema},
-  prompt: `You are a nutrition expert. You will estimate the calorie count and macro breakdown (protein, carbs, fat) of a meal.
+  prompt: `You are a nutrition expert. Your first task is to determine if the provided photo clearly shows a meal.
 
-  Use the following as sources of information about the meal.
-  Photo: {{media url=photoDataUri}}
-  {{#if mealDescription}}
-  User's description: {{{mealDescription}}}
-  {{/if}}
+If a meal is detected:
+  Set 'isMealDetected' to true.
+  Estimate the calorie count and macro breakdown (protein, carbs, fat) for the meal.
+  Return these details in the JSON format specified below.
 
-  Prioritize the user's description if it provides specific details about ingredients or quantities, but also use the photo to visually assess portion sizes and identify items not mentioned in the description. If the description and photo seem to conflict, try to make a reasonable interpretation or focus on the more specific information.
+If no meal is detected in the photo:
+  Set 'isMealDetected' to false.
+  In this case, ONLY include the 'isMealDetected' field in your JSON response. Do NOT include 'estimatedCalories' or 'macroBreakdown'.
 
-  Return the estimated calorie count and macro breakdown in the following JSON format:
-  {
-    "estimatedCalories": number,
-    "macroBreakdown": {
-      "protein": number,
-      "carbs": number,
-      "fat": number
-    }
-  }`,
+Use the following as sources of information about the meal.
+Photo: {{media url=photoDataUri}}
+{{#if mealDescription}}
+User's description: {{{mealDescription}}}
+{{/if}}
+
+Prioritize the user's description if it provides specific details about ingredients or quantities, but also use the photo to visually assess portion sizes and identify items not mentioned in the description. If the description and photo seem to conflict, try to make a reasonable interpretation or focus on the more specific information.
+
+Respond in JSON format.
+Example for a detected meal:
+{
+  "isMealDetected": true,
+  "estimatedCalories": 500,
+  "macroBreakdown": {
+    "protein": 30,
+    "carbs": 50,
+    "fat": 20
+  }
+}
+Example if no meal is detected:
+{
+  "isMealDetected": false
+}`,
 });
 
 const estimateCaloriesMacrosFlow = ai.defineFlow(
@@ -75,3 +92,5 @@ const estimateCaloriesMacrosFlow = ai.defineFlow(
     return output!;
   }
 );
+
+    

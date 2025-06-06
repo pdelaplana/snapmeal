@@ -13,7 +13,7 @@ import type { EstimateCaloriesMacrosOutput } from '@/ai/flows/estimate-calories-
 import { useToast } from '@/hooks/use-toast';
 import { useMealLog } from '@/context/meal-log-context';
 import { useRouter } from 'next/navigation';
-import { Wand2, CheckCircle, Loader2, Info } from 'lucide-react';
+import { Wand2, CheckCircle, Loader2, Info, AlertTriangle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function AddMealPage() {
@@ -41,8 +41,13 @@ export default function AddMealPage() {
     setEstimation(null);
     try {
       const result = await estimateCaloriesMacros({ photoDataUri, mealDescription });
-      setEstimation(result);
-      toast({ title: 'Estimation Complete', description: 'Nutritional values have been estimated.' });
+      setEstimation(result); // Store the full AI response
+
+      if (result.isMealDetected && result.estimatedCalories !== undefined && result.macroBreakdown !== undefined) {
+        toast({ title: 'Estimation Complete', description: 'Nutritional values have been estimated.' });
+      } else {
+        toast({ variant: 'destructive', title: 'Meal Not Detected', icon: <AlertTriangle className="h-5 w-5" />, description: 'The AI could not detect a meal in the photo. Please try a different image or add a description.' });
+      }
     } catch (error) {
       console.error('Error estimating calories:', error);
       toast({ variant: 'destructive', title: 'Estimation Failed', description: 'Could not estimate nutrition. Please try again.' });
@@ -52,21 +57,23 @@ export default function AddMealPage() {
   };
 
   const handleLogMeal = () => {
-    if (!photoDataUri || !estimation) {
-      toast({ variant: 'destructive', title: 'Cannot Log Meal', description: 'Please capture a photo and get an estimation first.' });
+    if (!photoDataUri || !estimation || !estimation.isMealDetected || estimation.estimatedCalories === undefined || !estimation.macroBreakdown) {
+      toast({ variant: 'destructive', title: 'Cannot Log Meal', description: 'Please capture a photo and get a valid estimation first.' });
       return;
     }
     addMeal({
       photoDataUri,
-      estimatedCalories: estimation.estimatedCalories,
+      estimatedCalories: estimation.estimatedCalories, // Now type-safe due to the check
       protein: estimation.macroBreakdown.protein,
       carbs: estimation.macroBreakdown.carbs,
       fat: estimation.macroBreakdown.fat,
-      notes: notes, // We keep 'notes' separate from 'mealDescription' for AI
+      notes: notes,
     });
     toast({ title: 'Meal Logged!', description: 'Your meal has been added to your log.' });
     router.push('/dashboard');
   };
+  
+  const canLogMeal = estimation && estimation.isMealDetected && estimation.estimatedCalories !== undefined && estimation.macroBreakdown !== undefined && photoDataUri;
 
   return (
     <AppLayout>
@@ -109,7 +116,7 @@ export default function AddMealPage() {
                   ) : (
                     <>
                       <Wand2 className="mr-2 h-5 w-5" />
-                      Estimate Calories & Macros
+                      Estimate Nutrition
                     </>
                   )}
                 </Button>
@@ -119,7 +126,7 @@ export default function AddMealPage() {
 
           <MealEstimation estimation={estimation} isLoading={isLoading} />
           
-          {estimation && photoDataUri && (
+          {canLogMeal && (
             <div className="space-y-6 rounded-lg border bg-card p-6 shadow-md">
                <div>
                 <Label htmlFor="notes" className="text-md font-medium">Optional Notes for Log</Label>
@@ -142,3 +149,5 @@ export default function AddMealPage() {
     </AppLayout>
   );
 }
+
+    

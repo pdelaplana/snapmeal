@@ -1,7 +1,9 @@
+
 import type { EstimateCaloriesMacrosOutput } from '@/ai/flows/estimate-calories-macros';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Flame, Beef, Wheat, Drumstick } from 'lucide-react';
+import { Flame, Beef, Wheat, Drumstick, AlertCircle } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface MealEstimationProps {
   estimation: EstimateCaloriesMacrosOutput | null;
@@ -26,10 +28,18 @@ export default function MealEstimation({ estimation, isLoading }: MealEstimation
   }
 
   if (!estimation) {
-    return null; // Or a message like "Estimation will appear here"
+    return null; 
   }
 
-  const { estimatedCalories, macroBreakdown } = estimation;
+  if (!estimation.isMealDetected || estimation.estimatedCalories === undefined || !estimation.macroBreakdown) {
+    // If an estimation object exists but no meal was detected or data is missing,
+    // we don't show the nutrition card. The parent page already shows a toast.
+    // Optionally, you could show a specific message here too.
+    // For now, returning null keeps it clean as the toast handles the user feedback.
+    return null;
+  }
+
+  const { estimatedCalories, macroBreakdown } = estimation; // These are now guaranteed to exist due to the check above
   const totalMacros = macroBreakdown.protein + macroBreakdown.carbs + macroBreakdown.fat;
   const proteinPercentage = totalMacros > 0 ? (macroBreakdown.protein / totalMacros) * 100 : 0;
   const carbsPercentage = totalMacros > 0 ? (macroBreakdown.carbs / totalMacros) * 100 : 0;
@@ -78,3 +88,5 @@ export default function MealEstimation({ estimation, isLoading }: MealEstimation
     </Card>
   );
 }
+
+    
