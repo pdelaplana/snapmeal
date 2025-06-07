@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { CalendarDays, Flame, Beef, Wheat, Drumstick, Pencil, Tag } from 'lucide-react';
+import { CalendarDays, Flame, Beef, Wheat, Drumstick, Pencil, Tag, ListTree } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 interface MealLogItemProps {
@@ -89,6 +89,23 @@ export default function MealLogItem({ meal }: MealLogItemProps) {
             </div>
           )}
         </div>
+
+        {meal.recognizedItems && meal.recognizedItems.length > 0 && (
+          <div className="mb-3 space-y-1">
+            <div className="flex items-center text-xs font-medium text-foreground">
+              <ListTree className="mr-1.5 h-3.5 w-3.5 text-primary" />
+              <span>Recognized Items:</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {meal.recognizedItems.map((item, index) => (
+                <Badge key={index} variant="outline" className="text-xs">
+                  {item}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )}
+
         {meal.notes && (
           <div className="mt-3">
             <p className="text-xs font-medium text-foreground">Notes:</p>

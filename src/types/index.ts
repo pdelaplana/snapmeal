@@ -9,6 +9,7 @@ export interface Meal {
   fat: number | null;
   notes?: string;
   mealType: "Breakfast" | "Lunch" | "Dinner" | "Snack" | "Pre-workout" | "Post-workout";
+  recognizedItems?: string[] | null; // Added field for recognized items
 }
 
 export const mealTypes: Meal['mealType'][] = ["Breakfast", "Lunch", "Dinner", "Snack", "Pre-workout", "Post-workout"];

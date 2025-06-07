@@ -14,13 +14,14 @@ import { estimateCaloriesMacros, type EstimateCaloriesMacrosOutput } from '@/ai/
 import { useToast } from '@/hooks/use-toast';
 import { useMealLog } from '@/context/meal-log-context';
 import { mealTypes, estimationTypes, type Meal, type EstimationType } from '@/types';
-import { Wand2, Save, Loader2, Info, AlertTriangle, ChevronLeft, Trash2, CalendarIcon, Edit3 } from 'lucide-react';
+import { Wand2, Save, Loader2, Info, AlertTriangle, ChevronLeft, Trash2, CalendarIcon, Edit3, ListTree } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { LoadingSpinner } from '@/components/loading-spinner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from '@/components/ui/badge';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -61,11 +62,12 @@ export default function EditMealPage() {
   const [selectedEstimationType, setSelectedEstimationType] = useState<EstimationType>('calories_macros');
   const [showManualInputs, setShowManualInputs] = useState(true);
 
-  // State for manual overrides
+  // State for manual overrides & logged items
   const [manualCalories, setManualCalories] = useState<string>('');
   const [manualProtein, setManualProtein] = useState<string>('');
   const [manualCarbs, setManualCarbs] = useState<string>('');
   const [manualFat, setManualFat] = useState<string>('');
+  const [loggedRecognizedItems, setLoggedRecognizedItems] = useState<string[] | null>(null);
 
 
   useEffect(() => {
@@ -89,6 +91,7 @@ export default function EditMealPage() {
       setMealDescription(''); 
       setNotes(mealToEdit.notes || '');
       setSelectedMealType(mealToEdit.mealType);
+      setLoggedRecognizedItems(mealToEdit.recognizedItems ?? null);
       
       const mealTimestamp = new Date(mealToEdit.timestamp);
       setSelectedDate(mealTimestamp);
@@ -109,7 +112,7 @@ export default function EditMealPage() {
       setManualCarbs(mealToEdit.carbs?.toString() ?? '');
       setManualFat(mealToEdit.fat?.toString() ?? '');
 
-      setAiEstimation({
+      setAiEstimation({ // Initialize AI estimation to show current saved values
         isMealDetected: true, 
         estimatedCalories: mealToEdit.estimatedCalories,
         macroBreakdown: (mealToEdit.protein != null || mealToEdit.carbs != null || mealToEdit.fat != null) ? {
@@ -117,6 +120,7 @@ export default function EditMealPage() {
           carbs: mealToEdit.carbs ?? 0,
           fat: mealToEdit.fat ?? 0,
         } : null,
+        recognizedItems: mealToEdit.recognizedItems ?? null,
       });
       setDescriptionUsedInLastEstimate(null); 
       setPageState('loaded');
@@ -129,6 +133,7 @@ export default function EditMealPage() {
 
 
   useEffect(() => {
+    // This effect populates manual fields AND loggedRecognizedItems from AI result if re-estimation occurs
     if (pageState !== 'loaded' || isEstimating) return; 
 
     if (aiEstimation && aiEstimation.isMealDetected) {
@@ -146,23 +151,27 @@ export default function EditMealPage() {
         setManualCarbs('');
         setManualFat('');
       }
+      setLoggedRecognizedItems(aiEstimation.recognizedItems ?? null); // Update recognized items from new AI est
     } else if (aiEstimation && !aiEstimation.isMealDetected) { 
         setManualCalories('');
         setManualProtein('');
         setManualCarbs('');
         setManualFat('');
+        setLoggedRecognizedItems(null);
     }
   }, [aiEstimation, selectedEstimationType, pageState, isEstimating]);
 
 
   const handlePhotoCaptured = useCallback((dataUri: string) => {
     setPhotoDataUri(dataUri);
-    setAiEstimation(null); 
+    setAiEstimation(null); // Clear previous AI estimation display
     setDescriptionUsedInLastEstimate(null); 
+    // Clear manual inputs and recognized items, as they will be repopulated by new estimate or user
     setManualCalories('');
     setManualProtein('');
     setManualCarbs('');
     setManualFat('');
+    setLoggedRecognizedItems(null); 
   }, []);
 
   const handleEstimate = async () => {
@@ -178,7 +187,7 @@ export default function EditMealPage() {
         mealDescription,
         estimationType: selectedEstimationType
       });
-      setAiEstimation(result); 
+      setAiEstimation(result); // This will trigger the useEffect above to update manual fields and loggedRecognizedItems
 
       if (!result.isMealDetected) {
         toast({ variant: 'destructive', title: 'Meal Not Detected', icon: <AlertTriangle className="h-5 w-5" />, description: 'The AI could not detect a meal in the photo. Please try a different image or add a description.' });
@@ -189,16 +198,20 @@ export default function EditMealPage() {
       ) {
         toast({ variant: 'destructive', title: 'Estimation Incomplete', icon: <AlertTriangle className="h-5 w-5" />, description: 'The AI detected a meal but could not provide full estimates for the selected type.' });
       } else {
-         toast({ title: 'New Estimation Complete', description: 'Nutritional values have been re-estimated.' });
+         toast({ title: 'New Estimation Complete', description: 'Nutritional values have been re-estimated. Review and save.' });
       }
     } catch (error: any) {
       console.error('Error re-estimating nutrition:', error);
       toast({ variant: 'destructive', title: 'Re-estimation Failed', description: error.message || 'Could not re-estimate nutrition. Please try again.' });
+      // Restore AI estimation display to initial meal data if re-estimation fails
       setAiEstimation(initialMealData ? {
         isMealDetected: true,
         estimatedCalories: initialMealData.estimatedCalories,
         macroBreakdown: (initialMealData.protein != null || initialMealData.carbs != null || initialMealData.fat != null) ? { protein: initialMealData.protein ?? 0, carbs: initialMealData.carbs ?? 0, fat: initialMealData.fat ?? 0 } : null,
+        recognizedItems: initialMealData.recognizedItems ?? null,
       } : null);
+      // Also restore loggedRecognizedItems to initial data if re-estimation fails
+      setLoggedRecognizedItems(initialMealData?.recognizedItems ?? null);
       setDescriptionUsedInLastEstimate(null); 
     } finally {
       setIsEstimating(false);
@@ -247,6 +260,7 @@ export default function EditMealPage() {
       fat: isValidNumberString(manualFat) ? parseFloat(manualFat) : null,
       mealType: selectedMealType as Meal['mealType'],
       notes: notes,
+      recognizedItems: loggedRecognizedItems,
     });
     toast({ title: 'Meal Updated!', description: 'Your meal log has been updated.' });
     router.push('/dashboard');
@@ -505,7 +519,21 @@ export default function EditMealPage() {
                   )}
                 </>
               )}
-
+              {loggedRecognizedItems && loggedRecognizedItems.length > 0 && (
+                <div className="space-y-2">
+                   <Label className="text-md flex items-center">
+                      <ListTree className="mr-2 h-4 w-4 text-primary" />
+                      Recognized Items (Saved)
+                    </Label>
+                  <div className="flex flex-wrap gap-2">
+                    {loggedRecognizedItems.map((item, index) => (
+                      <Badge key={index} variant="secondary">
+                        {item}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div>
                 <Label htmlFor="notesEdit">Notes for Log</Label>
                 <Textarea
@@ -552,4 +580,3 @@ export default function EditMealPage() {
     </AppLayout>
   );
 }
-

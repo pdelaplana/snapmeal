@@ -26,7 +26,12 @@ export function MealLogProvider({ children }: { children: ReactNode }) {
     try {
       const storedMeals = localStorage.getItem(MEAL_LOG_STORAGE_KEY);
       if (storedMeals) {
-        setMeals(JSON.parse(storedMeals));
+        // Ensure recognizedItems defaults to null if not present for older items
+        const parsedMeals = JSON.parse(storedMeals).map((meal: any) => ({
+          ...meal,
+          recognizedItems: meal.recognizedItems ?? null,
+        }));
+        setMeals(parsedMeals);
       }
     } catch (error) {
       console.error("Failed to load meals from local storage", error);
@@ -48,6 +53,7 @@ export function MealLogProvider({ children }: { children: ReactNode }) {
     const newMealWithId: Meal = {
       ...newMealData,
       id: crypto.randomUUID(),
+      recognizedItems: newMealData.recognizedItems ?? null, // Ensure it's part of the new meal
     };
     setMeals(prevMeals => [newMealWithId, ...prevMeals].sort((a, b) => b.timestamp - a.timestamp));
   }, []);
@@ -55,7 +61,7 @@ export function MealLogProvider({ children }: { children: ReactNode }) {
   const updateMeal = useCallback((mealId: string, updatedMealData: Omit<Meal, 'id'>) => {
     setMeals(prevMeals =>
       prevMeals.map(meal =>
-        meal.id === mealId ? { ...meal, ...updatedMealData } : meal
+        meal.id === mealId ? { id: meal.id, ...updatedMealData, recognizedItems: updatedMealData.recognizedItems ?? null } : meal
       ).sort((a, b) => b.timestamp - a.timestamp)
     );
   }, []);
@@ -69,8 +75,6 @@ export function MealLogProvider({ children }: { children: ReactNode }) {
   }, [meals]);
   
   useEffect(() => {
-    // This effect ensures meals are always sorted after any modification or initial load.
-    // It compares stringified versions to avoid unnecessary re-renders if order is already correct.
     if (meals.length > 0) {
       const sortedMeals = [...meals].sort((a, b) => b.timestamp - a.timestamp);
       if (JSON.stringify(sortedMeals) !== JSON.stringify(meals)) {

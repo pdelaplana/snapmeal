@@ -14,12 +14,13 @@ import type { EstimateCaloriesMacrosOutput } from '@/ai/flows/estimate-calories-
 import { useToast } from '@/hooks/use-toast';
 import { useMealLog } from '@/context/meal-log-context';
 import { useRouter } from 'next/navigation';
-import { Wand2, CheckCircle, Loader2, Info, AlertTriangle, CalendarIcon, Edit3 } from 'lucide-react';
+import { Wand2, CheckCircle, Loader2, Info, AlertTriangle, CalendarIcon, Edit3, ListTree } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from '@/components/ui/badge';
 import { mealTypes, estimationTypes, type Meal, type EstimationType } from '@/types';
 import { format } from 'date-fns';
 import { cn } from "@/lib/utils";
@@ -43,6 +44,7 @@ export default function AddMealPage() {
   const [manualProtein, setManualProtein] = useState<string>('');
   const [manualCarbs, setManualCarbs] = useState<string>('');
   const [manualFat, setManualFat] = useState<string>('');
+  const [loggedRecognizedItems, setLoggedRecognizedItems] = useState<string[] | null>(null);
   
   const { toast } = useToast();
   const { addMeal } = useMealLog();
@@ -56,6 +58,7 @@ export default function AddMealPage() {
     setManualProtein('');
     setManualCarbs('');
     setManualFat('');
+    setLoggedRecognizedItems(null);
   };
 
   const handleEstimate = async () => {
@@ -65,6 +68,7 @@ export default function AddMealPage() {
     }
     setIsLoading(true);
     setEstimation(null);
+    setLoggedRecognizedItems(null);
     setDescriptionUsedInLastEstimate(!!mealDescription.trim());
     try {
       const result = await estimateCaloriesMacros({ 
@@ -73,6 +77,11 @@ export default function AddMealPage() {
         estimationType: selectedEstimationType 
       });
       setEstimation(result); 
+      if (result.isMealDetected && result.recognizedItems) {
+        setLoggedRecognizedItems(result.recognizedItems);
+      } else {
+        setLoggedRecognizedItems(null);
+      }
 
       if (!result.isMealDetected) {
         toast({ variant: 'destructive', title: 'Meal Not Detected', icon: <AlertTriangle className="h-5 w-5" />, description: 'The AI could not detect a meal in the photo. Please try a different image or add a description.' });
@@ -90,6 +99,7 @@ export default function AddMealPage() {
       toast({ variant: 'destructive', title: 'Estimation Failed', description: error.message || 'Could not estimate nutrition. Please try again.' });
       setEstimation(null); 
       setDescriptionUsedInLastEstimate(null);
+      setLoggedRecognizedItems(null);
     } finally {
       setIsLoading(false);
     }
@@ -111,11 +121,19 @@ export default function AddMealPage() {
         setManualCarbs('');
         setManualFat('');
       }
+      setLoggedRecognizedItems(estimation.recognizedItems ?? null);
     } else if (estimation && !estimation.isMealDetected) {
         setManualCalories('');
         setManualProtein('');
         setManualCarbs('');
         setManualFat('');
+        setLoggedRecognizedItems(null);
+    } else if (!estimation) { // When photo is removed or estimation is reset
+        setManualCalories('');
+        setManualProtein('');
+        setManualCarbs('');
+        setManualFat('');
+        setLoggedRecognizedItems(null);
     }
   }, [estimation, selectedEstimationType]);
 
@@ -160,6 +178,7 @@ export default function AddMealPage() {
       fat: isValidNumberString(manualFat) ? parseFloat(manualFat) : null,
       mealType: selectedMealType as Meal['mealType'],
       notes: notes,
+      recognizedItems: loggedRecognizedItems,
     });
     toast({ title: 'Meal Logged!', description: 'Your meal has been added to your log.' });
     router.push('/dashboard');
@@ -384,7 +403,21 @@ export default function AddMealPage() {
                     )}
                   </>
                 )}
-
+                 {loggedRecognizedItems && loggedRecognizedItems.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-md flex items-center">
+                      <ListTree className="mr-2 h-4 w-4 text-primary" />
+                      Recognized Items (to be logged)
+                    </Label>
+                    <div className="flex flex-wrap gap-2">
+                      {loggedRecognizedItems.map((item, index) => (
+                        <Badge key={index} variant="secondary">
+                          {item}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <div>
                   <Label htmlFor="notes">Optional Notes for Log</Label>
@@ -408,4 +441,3 @@ export default function AddMealPage() {
     </AppLayout>
   );
 }
-
