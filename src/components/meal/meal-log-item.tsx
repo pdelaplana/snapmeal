@@ -16,6 +16,23 @@ export default function MealLogItem({ meal }: MealLogItemProps) {
     return value != null ? `${value.toFixed(fixed)}${unit}` : 'N/A';
   };
 
+  let titleToDisplay: string;
+  if (meal.mealType && meal.mealType.trim() !== "") {
+    titleToDisplay = meal.mealType;
+  } else {
+    const mealDate = new Date(meal.timestamp);
+    const hour = mealDate.getHours();
+    if (hour >= 5 && hour < 12) { // 5:00 AM - 11:59 AM
+      titleToDisplay = "Morning Meal";
+    } else if (hour >= 12 && hour < 17) { // 12:00 PM - 4:59 PM
+      titleToDisplay = "Afternoon Meal";
+    } else if (hour >= 17 && hour < 22) { // 5:00 PM - 9:59 PM
+      titleToDisplay = "Evening Meal";
+    } else { // 10:00 PM - 4:59 AM
+      titleToDisplay = "Night Meal";
+    }
+  }
+
   return (
     <Card className="overflow-hidden shadow-lg transition-all hover:shadow-xl">
       <CardHeader className="relative p-0">
@@ -38,14 +55,12 @@ export default function MealLogItem({ meal }: MealLogItemProps) {
         </Link>
       </CardHeader>
       <CardContent className="p-4 md:p-6">
-        {meal.mealType && (
-          <div className="mb-3">
-            <h3 className="text-xl font-semibold text-foreground">{meal.mealType}</h3>
-            <p className="text-xs text-muted-foreground">
-              {new Date(meal.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
-            </p>
-          </div>
-        )}
+        <div className="mb-3">
+          <h3 className="text-xl font-semibold text-foreground">{titleToDisplay}</h3>
+          <p className="text-xs text-muted-foreground">
+            {new Date(meal.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
+          </p>
+        </div>
         
         <div className="mb-3 flex items-center text-sm text-muted-foreground">
           <CalendarDays className="mr-2 h-4 w-4" />
