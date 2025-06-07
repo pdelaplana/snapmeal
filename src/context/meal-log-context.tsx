@@ -7,8 +7,8 @@ import type { Meal } from '@/types';
 
 interface MealLogContextType {
   meals: Meal[];
-  addMeal: (newMealData: Omit<Meal, 'id' | 'timestamp'>) => void;
-  updateMeal: (mealId: string, updatedMealData: Omit<Meal, 'id' | 'timestamp'>) => void;
+  addMeal: (newMealData: Omit<Meal, 'id'>) => void;
+  updateMeal: (mealId: string, updatedMealData: Omit<Meal, 'id'>) => void;
   deleteMeal: (mealId: string) => void;
   getMealById: (id: string) => Meal | undefined;
   loading: boolean;
@@ -44,19 +44,18 @@ export function MealLogProvider({ children }: { children: ReactNode }) {
     }
   }, [meals, loading]);
 
-  const addMeal = useCallback((newMealData: Omit<Meal, 'id' | 'timestamp'>) => {
-    const newMeal: Meal = {
+  const addMeal = useCallback((newMealData: Omit<Meal, 'id'>) => {
+    const newMealWithId: Meal = {
       ...newMealData,
       id: crypto.randomUUID(),
-      timestamp: Date.now(),
     };
-    setMeals(prevMeals => [newMeal, ...prevMeals].sort((a, b) => b.timestamp - a.timestamp));
+    setMeals(prevMeals => [newMealWithId, ...prevMeals].sort((a, b) => b.timestamp - a.timestamp));
   }, []);
 
-  const updateMeal = useCallback((mealId: string, updatedMealData: Omit<Meal, 'id' | 'timestamp'>) => {
+  const updateMeal = useCallback((mealId: string, updatedMealData: Omit<Meal, 'id'>) => {
     setMeals(prevMeals =>
       prevMeals.map(meal =>
-        meal.id === mealId ? { ...meal, ...updatedMealData, timestamp: Date.now() } : meal
+        meal.id === mealId ? { ...meal, ...updatedMealData } : meal
       ).sort((a, b) => b.timestamp - a.timestamp)
     );
   }, []);
@@ -70,6 +69,8 @@ export function MealLogProvider({ children }: { children: ReactNode }) {
   }, [meals]);
   
   useEffect(() => {
+    // This effect ensures meals are always sorted after any modification or initial load.
+    // It compares stringified versions to avoid unnecessary re-renders if order is already correct.
     if (meals.length > 0) {
       const sortedMeals = [...meals].sort((a, b) => b.timestamp - a.timestamp);
       if (JSON.stringify(sortedMeals) !== JSON.stringify(meals)) {

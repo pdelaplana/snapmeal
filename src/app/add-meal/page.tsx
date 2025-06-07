@@ -1,11 +1,12 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import AppLayout from '@/components/layout/app-layout';
 import MealCapture from '@/components/meal/meal-capture';
 import MealEstimation from '@/components/meal/meal-estimation';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { estimateCaloriesMacros } from '@/ai/flows/estimate-calories-macros';
@@ -13,10 +14,14 @@ import type { EstimateCaloriesMacrosOutput } from '@/ai/flows/estimate-calories-
 import { useToast } from '@/hooks/use-toast';
 import { useMealLog } from '@/context/meal-log-context';
 import { useRouter } from 'next/navigation';
-import { Wand2, CheckCircle, Loader2, Info, AlertTriangle } from 'lucide-react';
+import { Wand2, CheckCircle, Loader2, Info, AlertTriangle, CalendarIcon } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { mealTypes, type Meal } from '@/types';
+import { format } from 'date-fns';
+import { cn } from "@/lib/utils";
 
 export default function AddMealPage() {
   const [photoDataUri, setPhotoDataUri] = useState<string | null>(null);
@@ -25,6 +30,8 @@ export default function AddMealPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [notes, setNotes] = useState('');
   const [selectedMealType, setSelectedMealType] = useState<Meal['mealType'] | undefined>(undefined);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [selectedTime, setSelectedTime] = useState<string>(format(new Date(), "HH:mm"));
   const [descriptionUsedInLastEstimate, setDescriptionUsedInLastEstimate] = useState<boolean | null>(null);
   const { toast } = useToast();
   const { addMeal } = useMealLog();
@@ -66,12 +73,22 @@ export default function AddMealPage() {
     }
   };
 
+  const getTimestamp = () => {
+    if (!selectedDate || !selectedTime) return Date.now();
+    const [hours, minutes] = selectedTime.split(':').map(Number);
+    const combinedDate = new Date(selectedDate);
+    combinedDate.setHours(hours, minutes, 0, 0);
+    return combinedDate.getTime();
+  };
+
   const handleLogMeal = () => {
-    if (!photoDataUri || !estimation || !estimation.isMealDetected || estimation.estimatedCalories == null || !estimation.macroBreakdown || !selectedMealType) {
-      toast({ variant: 'destructive', title: 'Cannot Log Meal', description: 'Please capture a photo, get a valid estimation, and select a meal type.' });
+    if (!photoDataUri || !estimation || !estimation.isMealDetected || estimation.estimatedCalories == null || !estimation.macroBreakdown || !selectedMealType || !selectedDate || !selectedTime) {
+      toast({ variant: 'destructive', title: 'Cannot Log Meal', description: 'Please capture a photo, get a valid estimation, select a meal type, and set date/time.' });
       return;
     }
+    
     addMeal({
+      timestamp: getTimestamp(),
       photoDataUri,
       estimatedCalories: estimation.estimatedCalories, 
       protein: estimation.macroBreakdown.protein,
@@ -84,7 +101,7 @@ export default function AddMealPage() {
     router.push('/dashboard');
   };
   
-  const canLogMeal = estimation && estimation.isMealDetected && estimation.estimatedCalories != null && estimation.macroBreakdown != null && photoDataUri && selectedMealType;
+  const canLogMeal = estimation && estimation.isMealDetected && estimation.estimatedCalories != null && estimation.macroBreakdown != null && photoDataUri && selectedMealType && selectedDate && selectedTime;
 
   return (
     <AppLayout>
@@ -143,6 +160,43 @@ export default function AddMealPage() {
           
           {estimation?.isMealDetected && estimation.estimatedCalories != null && estimation.macroBreakdown != null && photoDataUri && (
             <div className="space-y-6 rounded-lg border bg-card p-6 shadow-md">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                  <Label htmlFor="date" className="text-md font-medium">Date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "w-full justify-start text-left font-normal mt-2",
+                          !selectedDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onSelect={setSelectedDate}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <div>
+                  <Label htmlFor="time" className="text-md font-medium">Time</Label>
+                  <Input
+                    id="time"
+                    type="time"
+                    value={selectedTime}
+                    onChange={(e) => setSelectedTime(e.target.value)}
+                    className="mt-2"
+                  />
+                </div>
+              </div>
               <div>
                 <Label htmlFor="mealType" className="text-md font-medium">Meal Type</Label>
                 <Select
@@ -183,4 +237,3 @@ export default function AddMealPage() {
     </AppLayout>
   );
 }
-    
