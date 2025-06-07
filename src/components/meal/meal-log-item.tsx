@@ -26,9 +26,9 @@ export default function MealLogItem({ meal }: MealLogItemProps) {
             />
           </div>
         )}
-        <Link href={`/edit-meal/${meal.id}`} passHref legacyBehavior>
+        <Link href={`/edit-meal/${meal.id}`}>
           <Button asChild variant="outline" size="icon" className="absolute right-2 top-2 bg-background/70 hover:bg-background">
-            <a><Pencil className="h-4 w-4" /></a>
+            <Pencil className="h-4 w-4" />
           </Button>
         </Link>
       </CardHeader>
