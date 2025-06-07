@@ -19,7 +19,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { mealTypes, type Meal } from '@/types';
+import { mealTypes, estimationTypes, type Meal, type EstimationType } from '@/types';
 import { format } from 'date-fns';
 import { cn } from "@/lib/utils";
 
@@ -33,6 +33,8 @@ export default function AddMealPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedTime, setSelectedTime] = useState<string>(format(new Date(), "HH:mm"));
   const [descriptionUsedInLastEstimate, setDescriptionUsedInLastEstimate] = useState<boolean | null>(null);
+  const [selectedEstimationType, setSelectedEstimationType] = useState<EstimationType>('calories_macros');
+  
   const { toast } = useToast();
   const { addMeal } = useMealLog();
   const router = useRouter();
@@ -40,7 +42,7 @@ export default function AddMealPage() {
   const handlePhotoCaptured = (dataUri: string) => {
     setPhotoDataUri(dataUri);
     setEstimation(null); 
-    setMealDescription(''); 
+    // setMealDescription(''); // Keep description if user wants to re-estimate with same description but new photo
     setDescriptionUsedInLastEstimate(null);
   };
 
@@ -53,18 +55,26 @@ export default function AddMealPage() {
     setEstimation(null);
     setDescriptionUsedInLastEstimate(!!mealDescription.trim());
     try {
-      const result = await estimateCaloriesMacros({ photoDataUri, mealDescription });
+      const result = await estimateCaloriesMacros({ 
+        photoDataUri, 
+        mealDescription, 
+        estimationType: selectedEstimationType 
+      });
       setEstimation(result); 
 
-      if (result.isMealDetected && result.estimatedCalories != null && result.macroBreakdown != null) {
-        toast({ title: 'Estimation Complete', description: 'Nutritional values have been estimated.' });
-      } else if (!result.isMealDetected) {
+      if (!result.isMealDetected) {
         toast({ variant: 'destructive', title: 'Meal Not Detected', icon: <AlertTriangle className="h-5 w-5" />, description: 'The AI could not detect a meal in the photo. Please try a different image or add a description.' });
+      } else if (
+        (selectedEstimationType === 'calories_macros' && (result.estimatedCalories == null || result.macroBreakdown == null)) ||
+        (selectedEstimationType === 'calories_only' && result.estimatedCalories == null) ||
+        (selectedEstimationType === 'macros_only' && result.macroBreakdown == null)
+      ) {
+        toast({ variant: 'destructive', title: 'Estimation Incomplete', icon: <AlertTriangle className="h-5 w-5" />, description: 'The AI detected a meal but could not provide full estimates for the selected type.' });
       } else {
-        toast({ variant: 'destructive', title: 'Estimation Incomplete', icon: <AlertTriangle className="h-5 w-5" />, description: 'The AI detected a meal but could not provide full nutritional estimates.' });
+         toast({ title: 'Estimation Complete', description: 'Nutritional values have been estimated.' });
       }
     } catch (error: any) {
-      console.error('Error estimating calories:', error);
+      console.error('Error estimating nutrition:', error);
       toast({ variant: 'destructive', title: 'Estimation Failed', description: error.message || 'Could not estimate nutrition. Please try again.' });
       setEstimation(null); 
       setDescriptionUsedInLastEstimate(null);
@@ -81,28 +91,42 @@ export default function AddMealPage() {
     return combinedDate.getTime();
   };
 
+  const isEstimationValidForLogging = () => {
+    if (!estimation || !estimation.isMealDetected) return false;
+    if (selectedEstimationType === 'calories_macros') {
+      return estimation.estimatedCalories != null && estimation.macroBreakdown != null;
+    }
+    if (selectedEstimationType === 'calories_only') {
+      return estimation.estimatedCalories != null;
+    }
+    if (selectedEstimationType === 'macros_only') {
+      return estimation.macroBreakdown != null;
+    }
+    return false;
+  };
+  
+  const canLogMeal = photoDataUri && selectedMealType && selectedDate && selectedTime && isEstimationValidForLogging();
+
   const handleLogMeal = () => {
-    if (!photoDataUri || !estimation || !estimation.isMealDetected || estimation.estimatedCalories == null || !estimation.macroBreakdown || !selectedMealType || !selectedDate || !selectedTime) {
-      toast({ variant: 'destructive', title: 'Cannot Log Meal', description: 'Please capture a photo, get a valid estimation, select a meal type, and set date/time.' });
+    if (!canLogMeal || !estimation) { // Double check estimation due to its role in canLogMeal
+      toast({ variant: 'destructive', title: 'Cannot Log Meal', description: 'Please ensure photo, meal type, date/time are set and a valid estimation is present for the selected type.' });
       return;
     }
     
     addMeal({
       timestamp: getTimestamp(),
-      photoDataUri,
-      estimatedCalories: estimation.estimatedCalories, 
-      protein: estimation.macroBreakdown.protein,
-      carbs: estimation.macroBreakdown.carbs,
-      fat: estimation.macroBreakdown.fat,
-      mealType: selectedMealType,
+      photoDataUri: photoDataUri as string, // Already checked by canLogMeal
+      estimatedCalories: estimation.estimatedCalories ?? null, 
+      protein: estimation.macroBreakdown?.protein ?? null,
+      carbs: estimation.macroBreakdown?.carbs ?? null,
+      fat: estimation.macroBreakdown?.fat ?? null,
+      mealType: selectedMealType as Meal['mealType'], // Already checked
       notes: notes,
     });
     toast({ title: 'Meal Logged!', description: 'Your meal has been added to your log.' });
     router.push('/dashboard');
   };
   
-  const canLogMeal = estimation && estimation.isMealDetected && estimation.estimatedCalories != null && estimation.macroBreakdown != null && photoDataUri && selectedMealType && selectedDate && selectedTime;
-
   return (
     <AppLayout>
       <div className="container mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
@@ -115,7 +139,7 @@ export default function AddMealPage() {
           <MealCapture onPhotoCaptured={handlePhotoCaptured} />
 
           {photoDataUri && (
-            <div className="space-y-4 rounded-lg border bg-card p-6 shadow-md">
+            <div className="space-y-6 rounded-lg border bg-card p-6 shadow-md">
               <div>
                 <Label htmlFor="mealDescription" className="text-md font-medium">
                   Meal Description (Optional, for AI accuracy)
@@ -134,6 +158,26 @@ export default function AddMealPage() {
                   </AlertDescription>
                 </Alert>
               </div>
+
+              <div>
+                <Label htmlFor="estimationType" className="text-md font-medium">Estimation Type</Label>
+                <Select
+                  value={selectedEstimationType}
+                  onValueChange={(value) => setSelectedEstimationType(value as EstimationType)}
+                >
+                  <SelectTrigger id="estimationType" className="mt-2">
+                    <SelectValue placeholder="Select estimation type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {estimationTypes.map((type) => (
+                      <SelectItem key={type.value} value={type.value}>
+                        {type.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="text-center">
                 <Button onClick={handleEstimate} disabled={isLoading || !photoDataUri} size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground">
                   {isLoading ? (
@@ -156,9 +200,10 @@ export default function AddMealPage() {
             estimation={estimation} 
             isLoading={isLoading} 
             descriptionUsedForEstimation={descriptionUsedInLastEstimate} 
+            estimationType={selectedEstimationType}
           />
           
-          {estimation?.isMealDetected && estimation.estimatedCalories != null && estimation.macroBreakdown != null && photoDataUri && (
+          {isEstimationValidForLogging() && photoDataUri && (
             <div className="space-y-6 rounded-lg border bg-card p-6 shadow-md">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>

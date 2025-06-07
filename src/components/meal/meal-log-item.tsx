@@ -12,6 +12,10 @@ interface MealLogItemProps {
 }
 
 export default function MealLogItem({ meal }: MealLogItemProps) {
+  const displayValue = (value: number | null, unit: string = '', fixed: number = 0) => {
+    return value != null ? `${value.toFixed(fixed)}${unit}` : 'N/A';
+  };
+
   return (
     <Card className="overflow-hidden shadow-lg transition-all hover:shadow-xl">
       <CardHeader className="relative p-0">
@@ -28,7 +32,7 @@ export default function MealLogItem({ meal }: MealLogItemProps) {
           </div>
         )}
         <Link href={`/edit-meal/${meal.id}`}>
-          <Button asChild variant="outline" size="icon" className="absolute right-2 top-2 bg-background/70 hover:bg-background">
+          <Button variant="outline" size="icon" className="absolute right-2 top-2 bg-background/70 hover:bg-background">
             <Pencil className="h-4 w-4" />
           </Button>
         </Link>
@@ -48,34 +52,42 @@ export default function MealLogItem({ meal }: MealLogItemProps) {
         </div>
         
         <div className="mb-3 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-          <div className="flex items-center">
-            <Flame className="mr-2 h-5 w-5 text-primary" />
-            <div>
-              <p className="font-medium">{meal.estimatedCalories.toFixed(0)}</p>
-              <p className="text-xs text-muted-foreground">Calories</p>
+          {meal.estimatedCalories != null && (
+            <div className="flex items-center">
+              <Flame className="mr-2 h-5 w-5 text-primary" />
+              <div>
+                <p className="font-medium">{displayValue(meal.estimatedCalories)}</p>
+                <p className="text-xs text-muted-foreground">Calories</p>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center">
-            <Beef className="mr-2 h-5 w-5 text-red-500" />
-            <div>
-              <p className="font-medium">{meal.protein.toFixed(1)}g</p>
-              <p className="text-xs text-muted-foreground">Protein</p>
+          )}
+          {meal.protein != null && (
+            <div className="flex items-center">
+              <Beef className="mr-2 h-5 w-5 text-red-500" />
+              <div>
+                <p className="font-medium">{displayValue(meal.protein, 'g', 1)}</p>
+                <p className="text-xs text-muted-foreground">Protein</p>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center">
-            <Wheat className="mr-2 h-5 w-5 text-yellow-500" />
-            <div>
-              <p className="font-medium">{meal.carbs.toFixed(1)}g</p>
-              <p className="text-xs text-muted-foreground">Carbs</p>
+          )}
+          {meal.carbs != null && (
+            <div className="flex items-center">
+              <Wheat className="mr-2 h-5 w-5 text-yellow-500" />
+              <div>
+                <p className="font-medium">{displayValue(meal.carbs, 'g', 1)}</p>
+                <p className="text-xs text-muted-foreground">Carbs</p>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center">
-            <Drumstick className="mr-2 h-5 w-5 text-orange-500" />
-            <div>
-              <p className="font-medium">{meal.fat.toFixed(1)}g</p>
-              <p className="text-xs text-muted-foreground">Fat</p>
+          )}
+          {meal.fat != null && (
+            <div className="flex items-center">
+              <Drumstick className="mr-2 h-5 w-5 text-orange-500" />
+              <div>
+                <p className="font-medium">{displayValue(meal.fat, 'g', 1)}</p>
+                <p className="text-xs text-muted-foreground">Fat</p>
+              </div>
             </div>
-          </div>
+          )}
         </div>
         {meal.notes && (
           <div className="mt-3">

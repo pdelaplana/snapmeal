@@ -1,17 +1,19 @@
 
 import type { EstimateCaloriesMacrosOutput } from '@/ai/flows/estimate-calories-macros';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Flame, Beef, Wheat, Drumstick, Info } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Flame, Beef, Wheat, Drumstick, Info, HelpCircle } from 'lucide-react'; // Added HelpCircle
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import type { EstimationType } from '@/types';
 
 interface MealEstimationProps {
   estimation: EstimateCaloriesMacrosOutput | null;
   isLoading: boolean;
   descriptionUsedForEstimation?: boolean | null;
+  estimationType?: EstimationType; // To know what was requested
 }
 
-export default function MealEstimation({ estimation, isLoading, descriptionUsedForEstimation }: MealEstimationProps) {
+export default function MealEstimation({ estimation, isLoading, descriptionUsedForEstimation, estimationType }: MealEstimationProps) {
   if (isLoading) {
     return (
       <Card className="shadow-lg">
@@ -31,16 +33,44 @@ export default function MealEstimation({ estimation, isLoading, descriptionUsedF
   if (!estimation) {
     return null; 
   }
+  
+  const showCalories = estimation.estimatedCalories != null && (estimationType === 'calories_macros' || estimationType === 'calories_only');
+  const showMacros = estimation.macroBreakdown != null && (estimationType === 'calories_macros' || estimationType === 'macros_only');
 
-  if (!estimation.isMealDetected || estimation.estimatedCalories == null || !estimation.macroBreakdown) {
+  if (!estimation.isMealDetected) {
+     // No need to render if meal not detected, parent page shows specific alert
     return null;
   }
+  
+  // If meal detected but no relevant data for the chosen estimation type
+  if (estimation.isMealDetected && !showCalories && !showMacros && estimationType) {
+     return (
+        <Card className="shadow-lg">
+            <CardHeader>
+                <CardTitle className="text-xl font-semibold">Estimation Issue</CardTitle>
+            </CardHeader>
+            <CardContent>
+                 <Alert variant="destructive">
+                    <HelpCircle className="h-4 w-4" />
+                    <AlertDescription>
+                        A meal was detected, but the AI could not provide the requested {estimationType.replace('_', ' ')} estimates. You might want to try a clearer photo, add a description, or re-estimate.
+                    </AlertDescription>
+                </Alert>
+            </CardContent>
+        </Card>
+     );
+  }
+
 
   const { estimatedCalories, macroBreakdown } = estimation;
-  const totalMacros = macroBreakdown.protein + macroBreakdown.carbs + macroBreakdown.fat;
-  const proteinPercentage = totalMacros > 0 ? (macroBreakdown.protein / totalMacros) * 100 : 0;
-  const carbsPercentage = totalMacros > 0 ? (macroBreakdown.carbs / totalMacros) * 100 : 0;
-  const fatPercentage = totalMacros > 0 ? (macroBreakdown.fat / totalMacros) * 100 : 0;
+  
+  let proteinPercentage = 0, carbsPercentage = 0, fatPercentage = 0;
+  if (macroBreakdown) {
+    const totalMacros = (macroBreakdown.protein || 0) + (macroBreakdown.carbs || 0) + (macroBreakdown.fat || 0);
+    proteinPercentage = totalMacros > 0 ? ((macroBreakdown.protein || 0) / totalMacros) * 100 : 0;
+    carbsPercentage = totalMacros > 0 ? ((macroBreakdown.carbs || 0) / totalMacros) * 100 : 0;
+    fatPercentage = totalMacros > 0 ? ((macroBreakdown.fat || 0) / totalMacros) * 100 : 0;
+  }
 
 
   return (
@@ -59,38 +89,45 @@ export default function MealEstimation({ estimation, isLoading, descriptionUsedF
         )}
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="flex items-center justify-between rounded-lg bg-primary/10 p-4">
-          <div className="flex items-center">
-            <Flame className="mr-3 h-8 w-8 text-primary" />
-            <span className="text-lg font-medium text-foreground">Total Calories</span>
+        {showCalories && estimatedCalories != null && (
+          <div className="flex items-center justify-between rounded-lg bg-primary/10 p-4">
+            <div className="flex items-center">
+              <Flame className="mr-3 h-8 w-8 text-primary" />
+              <span className="text-lg font-medium text-foreground">Total Calories</span>
+            </div>
+            <span className="text-2xl font-bold text-primary">{estimatedCalories.toFixed(0)}</span>
           </div>
-          <span className="text-2xl font-bold text-primary">{estimatedCalories.toFixed(0)}</span>
-        </div>
+        )}
 
-        <div className="space-y-3">
-          <h3 className="text-md font-medium text-foreground">Macro Breakdown:</h3>
-          <div className="flex items-center">
-            <Beef className="mr-2 h-5 w-5 text-red-500" />
-            <span className="w-20 shrink-0 text-sm">Protein:</span>
-            <span className="mr-2 flex-grow font-medium">{macroBreakdown.protein.toFixed(1)}g</span>
-            <Progress value={proteinPercentage} className="h-2 w-24" />
+        {showMacros && macroBreakdown && (
+          <div className="space-y-3">
+            <h3 className="text-md font-medium text-foreground">Macro Breakdown:</h3>
+            <div className="flex items-center">
+              <Beef className="mr-2 h-5 w-5 text-red-500" />
+              <span className="w-20 shrink-0 text-sm">Protein:</span>
+              <span className="mr-2 flex-grow font-medium">{(macroBreakdown.protein || 0).toFixed(1)}g</span>
+              <Progress value={proteinPercentage} className="h-2 w-24" />
+            </div>
+            <div className="flex items-center">
+              <Wheat className="mr-2 h-5 w-5 text-yellow-500" />
+              <span className="w-20 shrink-0 text-sm">Carbs:</span>
+              <span className="mr-2 flex-grow font-medium">{(macroBreakdown.carbs || 0).toFixed(1)}g</span>
+              <Progress value={carbsPercentage} className="h-2 w-24" />
+            </div>
+            <div className="flex items-center">
+              <Drumstick className="mr-2 h-5 w-5 text-orange-500" />
+              <span className="w-20 shrink-0 text-sm">Fat:</span>
+              <span className="mr-2 flex-grow font-medium">{(macroBreakdown.fat || 0).toFixed(1)}g</span>
+              <Progress value={fatPercentage} className="h-2 w-24" />
+            </div>
           </div>
-          <div className="flex items-center">
-            <Wheat className="mr-2 h-5 w-5 text-yellow-500" />
-            <span className="w-20 shrink-0 text-sm">Carbs:</span>
-            <span className="mr-2 flex-grow font-medium">{macroBreakdown.carbs.toFixed(1)}g</span>
-            <Progress value={carbsPercentage} className="h-2 w-24" />
-          </div>
-          <div className="flex items-center">
-            <Drumstick className="mr-2 h-5 w-5 text-orange-500" />
-            <span className="w-20 shrink-0 text-sm">Fat:</span>
-            <span className="mr-2 flex-grow font-medium">{macroBreakdown.fat.toFixed(1)}g</span>
-            <Progress value={fatPercentage} className="h-2 w-24" />
-          </div>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          *These are estimates. Actual values may vary.
-        </p>
+        )}
+        
+        {(showCalories || showMacros) && (
+            <p className="text-xs text-muted-foreground">
+            *These are estimates. Actual values may vary.
+            </p>
+        )}
       </CardContent>
     </Card>
   );

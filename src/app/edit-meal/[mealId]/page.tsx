@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { estimateCaloriesMacros, type EstimateCaloriesMacrosOutput } from '@/ai/flows/estimate-calories-macros';
 import { useToast } from '@/hooks/use-toast';
 import { useMealLog } from '@/context/meal-log-context';
-import { mealTypes, type Meal } from '@/types';
+import { mealTypes, estimationTypes, type Meal, type EstimationType } from '@/types';
 import { Wand2, Save, Loader2, Info, AlertTriangle, ChevronLeft, Trash2, CalendarIcon } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { LoadingSpinner } from '@/components/loading-spinner';
@@ -55,6 +55,7 @@ export default function EditMealPage() {
   const [isEstimating, setIsEstimating] = useState(false);
   const [pageState, setPageState] = useState<PageState>('loading');
   const [descriptionUsedInLastEstimate, setDescriptionUsedInLastEstimate] = useState<boolean | null>(null);
+  const [selectedEstimationType, setSelectedEstimationType] = useState<EstimationType>('calories_macros');
 
 
   useEffect(() => {
@@ -80,16 +81,28 @@ export default function EditMealPage() {
       setSelectedMealType(mealToEdit.mealType);
       setSelectedDate(new Date(mealToEdit.timestamp));
       setSelectedTime(format(new Date(mealToEdit.timestamp), "HH:mm"));
+      
+      // Determine initial estimation type based on stored data
+      if (mealToEdit.estimatedCalories != null && mealToEdit.protein != null) { // Assuming protein indicates macros were estimated
+        setSelectedEstimationType('calories_macros');
+      } else if (mealToEdit.estimatedCalories != null) {
+        setSelectedEstimationType('calories_only');
+      } else if (mealToEdit.protein != null) {
+        setSelectedEstimationType('macros_only');
+      } else {
+        setSelectedEstimationType('calories_macros'); // Fallback
+      }
+
       setEstimation({
         isMealDetected: true, 
         estimatedCalories: mealToEdit.estimatedCalories,
-        macroBreakdown: {
+        macroBreakdown: mealToEdit.protein != null && mealToEdit.carbs != null && mealToEdit.fat != null ? {
           protein: mealToEdit.protein,
           carbs: mealToEdit.carbs,
           fat: mealToEdit.fat,
-        },
+        } : null,
       });
-      setDescriptionUsedInLastEstimate(null); // Reset this as original estimate conditions are unknown
+      setDescriptionUsedInLastEstimate(null); 
       setPageState('loaded');
     } else {
       toast({ variant: 'destructive', title: 'Meal not found', description: `The meal you're trying to edit doesn't exist or could not be loaded.` });
@@ -112,20 +125,32 @@ export default function EditMealPage() {
     setIsEstimating(true);
     setDescriptionUsedInLastEstimate(!!mealDescription.trim());
     try {
-      const result = await estimateCaloriesMacros({ photoDataUri, mealDescription });
+      const result = await estimateCaloriesMacros({ 
+        photoDataUri, 
+        mealDescription,
+        estimationType: selectedEstimationType
+      });
       setEstimation(result);
 
-      if (result.isMealDetected && result.estimatedCalories != null && result.macroBreakdown != null) {
-        toast({ title: 'New Estimation Complete', description: 'Nutritional values have been re-estimated.' });
-      } else if (!result.isMealDetected) {
+      if (!result.isMealDetected) {
         toast({ variant: 'destructive', title: 'Meal Not Detected', icon: <AlertTriangle className="h-5 w-5" />, description: 'The AI could not detect a meal in the photo. Please try a different image or add a description.' });
+      } else if (
+        (selectedEstimationType === 'calories_macros' && (result.estimatedCalories == null || result.macroBreakdown == null)) ||
+        (selectedEstimationType === 'calories_only' && result.estimatedCalories == null) ||
+        (selectedEstimationType === 'macros_only' && result.macroBreakdown == null)
+      ) {
+        toast({ variant: 'destructive', title: 'Estimation Incomplete', icon: <AlertTriangle className="h-5 w-5" />, description: 'The AI detected a meal but could not provide full estimates for the selected type.' });
       } else {
-        toast({ variant: 'destructive', title: 'Estimation Incomplete', icon: <AlertTriangle className="h-5 w-5" />, description: 'The AI detected a meal but could not provide full nutritional estimates.' });
+         toast({ title: 'New Estimation Complete', description: 'Nutritional values have been re-estimated.' });
       }
     } catch (error: any) {
-      console.error('Error estimating calories:', error);
-      toast({ variant: 'destructive', title: 'Estimation Failed', description: error.message || 'Could not estimate nutrition. Please try again.' });
-      setEstimation(null); 
+      console.error('Error re-estimating nutrition:', error);
+      toast({ variant: 'destructive', title: 'Re-estimation Failed', description: error.message || 'Could not re-estimate nutrition. Please try again.' });
+      setEstimation(initialMealData ? { // Fallback to initial if re-estimation fails and data exists
+        isMealDetected: true,
+        estimatedCalories: initialMealData.estimatedCalories,
+        macroBreakdown: initialMealData.protein != null ? { protein: initialMealData.protein, carbs: initialMealData.carbs!, fat: initialMealData.fat! } : null,
+      } : null); 
       setDescriptionUsedInLastEstimate(null); 
     } finally {
       setIsEstimating(false);
@@ -133,7 +158,7 @@ export default function EditMealPage() {
   };
   
   const getTimestamp = () => {
-    if (!selectedDate || !selectedTime) { // Fallback, though UI should prevent this
+    if (!selectedDate || !selectedTime) { 
         return initialMealData?.timestamp || Date.now();
     }
     const [hours, minutes] = selectedTime.split(':').map(Number);
@@ -142,29 +167,36 @@ export default function EditMealPage() {
     return combinedDate.getTime();
   };
 
+  const isEstimationValidForUpdate = () => {
+    if (!estimation || !estimation.isMealDetected) return false;
+    if (selectedEstimationType === 'calories_macros') {
+      return estimation.estimatedCalories != null && estimation.macroBreakdown != null;
+    }
+    if (selectedEstimationType === 'calories_only') {
+      return estimation.estimatedCalories != null;
+    }
+    if (selectedEstimationType === 'macros_only') {
+      return estimation.macroBreakdown != null;
+    }
+    return false;
+  };
+
+  const canUpdateMeal = initialMealData && photoDataUri && selectedMealType && selectedDate && selectedTime && isEstimationValidForUpdate();
+
   const handleUpdateMeal = () => {
-    if (!initialMealData) { 
-        toast({ variant: 'destructive', title: 'Error', description: 'Original meal data is missing.' });
+    if (!initialMealData || !canUpdateMeal || !estimation) { 
+        toast({ variant: 'destructive', title: 'Cannot Update Meal', description: 'Please ensure all required fields are filled and a valid estimation is present for the selected type.' });
         return;
-    }
-    if (!photoDataUri) {
-      toast({ variant: 'destructive', title: 'Cannot Update Meal', description: 'A photo is required for the meal log.' });
-      return;
-    }
-    if (!estimation || !estimation.isMealDetected || estimation.estimatedCalories == null || !estimation.macroBreakdown || !selectedMealType || !selectedDate || !selectedTime) {
-      toast({ variant: 'destructive', title: 'Cannot Update Meal', description: 'Valid nutritional estimation, meal type, and date/time are required.' });
-      return;
     }
 
     updateMeal(initialMealData.id, {
-      // id: initialMealData.id, // ID is not part of Omit<Meal, 'id'>
       timestamp: getTimestamp(),
-      photoDataUri,
-      estimatedCalories: estimation.estimatedCalories,
-      protein: estimation.macroBreakdown.protein,
-      carbs: estimation.macroBreakdown.carbs,
-      fat: estimation.macroBreakdown.fat,
-      mealType: selectedMealType,
+      photoDataUri: photoDataUri as string,
+      estimatedCalories: estimation.estimatedCalories ?? null,
+      protein: estimation.macroBreakdown?.protein ?? null,
+      carbs: estimation.macroBreakdown?.carbs ?? null,
+      fat: estimation.macroBreakdown?.fat ?? null,
+      mealType: selectedMealType as Meal['mealType'],
       notes: notes,
     });
     toast({ title: 'Meal Updated!', description: 'Your meal log has been updated.' });
@@ -201,8 +233,6 @@ export default function EditMealPage() {
     );
   }
   
-  const canUpdateMeal = estimation && estimation.isMealDetected && estimation.estimatedCalories != null && estimation.macroBreakdown != null && photoDataUri && selectedMealType && selectedDate && selectedTime;
-
   return (
     <AppLayout>
       <div className="container mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
@@ -218,7 +248,7 @@ export default function EditMealPage() {
           />
 
           {photoDataUri && (
-            <div className="space-y-4 rounded-lg border bg-card p-6 shadow-md">
+            <div className="space-y-6 rounded-lg border bg-card p-6 shadow-md">
               <div>
                 <Label htmlFor="mealDescription" className="text-md font-medium">
                   Meal Description (Optional, for AI re-estimation)
@@ -237,6 +267,30 @@ export default function EditMealPage() {
                   </AlertDescription>
                 </Alert>
               </div>
+              
+              <div>
+                <Label htmlFor="estimationTypeEdit" className="text-md font-medium">Estimation Type</Label>
+                <Select
+                  value={selectedEstimationType}
+                  onValueChange={(value) => {
+                    setSelectedEstimationType(value as EstimationType);
+                    setEstimation(null); // Reset estimation when type changes
+                    setDescriptionUsedInLastEstimate(null);
+                  }}
+                >
+                  <SelectTrigger id="estimationTypeEdit" className="mt-2">
+                    <SelectValue placeholder="Select estimation type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {estimationTypes.map((type) => (
+                      <SelectItem key={type.value} value={type.value}>
+                        {type.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="text-center">
                 <Button onClick={handleEstimate} disabled={isEstimating || !photoDataUri} size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground">
                   {isEstimating ? (
@@ -259,6 +313,7 @@ export default function EditMealPage() {
             estimation={estimation} 
             isLoading={isEstimating}
             descriptionUsedForEstimation={descriptionUsedInLastEstimate}
+            estimationType={selectedEstimationType}
           />
           
           <div className="space-y-6 rounded-lg border bg-card p-6 shadow-md">
