@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Utensils, LogOut, ArrowLeft, User, Settings2, ChevronDown } from "lucide-react";
+import { Utensils, LogOut, ArrowLeft, User, Settings2, ChevronDown, Users } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import { useRouter, usePathname } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
@@ -76,6 +76,12 @@ export default function SiteHeader() {
                   <DropdownMenuItem>
                     <User className="mr-2 h-4 w-4" />
                     <span>Profile</span>
+                  </DropdownMenuItem>
+                </Link>
+                <Link href="/sharing" passHref>
+                  <DropdownMenuItem>
+                    <Users className="mr-2 h-4 w-4" />
+                    <span>Manage Sharing</span>
                   </DropdownMenuItem>
                 </Link>
                 <Link href="/account" passHref>
