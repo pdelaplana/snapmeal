@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react'; // Added React import
 import { useParams, useRouter } from 'next/navigation';
 import AppLayout from '@/components/layout/app-layout';
 import MealLogList from '@/components/meal/meal-log-list'; // Reusing this for display
@@ -133,5 +133,3 @@ export default function ViewSharedLogPage() {
     </AppLayout>
   );
 }
-
-    
