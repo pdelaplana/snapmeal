@@ -1,12 +1,15 @@
+
 "use client";
 
 import type { ReactNode } from 'react';
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { Meal } from '@/types';
 
 interface MealLogContextType {
   meals: Meal[];
   addMeal: (newMealData: Omit<Meal, 'id' | 'timestamp'>) => void;
+  updateMeal: (mealId: string, updatedMealData: Omit<Meal, 'id' | 'timestamp'>) => void;
+  getMealById: (id: string) => Meal | undefined;
   loading: boolean;
 }
 
@@ -31,7 +34,7 @@ export function MealLogProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!loading) { // Only save to localStorage after initial load
+    if (!loading) { 
       try {
         localStorage.setItem(MEAL_LOG_STORAGE_KEY, JSON.stringify(meals));
       } catch (error) {
@@ -40,17 +43,42 @@ export function MealLogProvider({ children }: { children: ReactNode }) {
     }
   }, [meals, loading]);
 
-  const addMeal = (newMealData: Omit<Meal, 'id' | 'timestamp'>) => {
+  const addMeal = useCallback((newMealData: Omit<Meal, 'id' | 'timestamp'>) => {
     const newMeal: Meal = {
       ...newMealData,
-      id: new Date().toISOString() + Math.random().toString(36).substring(2, 9), // simple unique id
+      id: new Date().toISOString() + Math.random().toString(36).substring(2, 9), 
       timestamp: Date.now(),
     };
-    setMeals(prevMeals => [newMeal, ...prevMeals]);
-  };
+    setMeals(prevMeals => [newMeal, ...prevMeals].sort((a, b) => b.timestamp - a.timestamp));
+  }, []);
+
+  const updateMeal = useCallback((mealId: string, updatedMealData: Omit<Meal, 'id' | 'timestamp'>) => {
+    setMeals(prevMeals =>
+      prevMeals.map(meal =>
+        meal.id === mealId ? { ...meal, ...updatedMealData, timestamp: Date.now() } : meal
+      ).sort((a, b) => b.timestamp - a.timestamp)
+    );
+  }, []);
+
+  const getMealById = useCallback((id: string): Meal | undefined => {
+    return meals.find(meal => meal.id === id);
+  }, [meals]);
+  
+  useEffect(() => {
+    // Ensure meals are always sorted by timestamp descending whenever meals array changes
+    // This handles initial load and any updates
+    if (meals.length > 0) {
+      const sortedMeals = [...meals].sort((a, b) => b.timestamp - a.timestamp);
+      // Only update state if the order has actually changed to prevent infinite loops
+      if (JSON.stringify(sortedMeals) !== JSON.stringify(meals)) {
+        setMeals(sortedMeals);
+      }
+    }
+  }, [meals]);
+
 
   return (
-    <MealLogContext.Provider value={{ meals, addMeal, loading }}>
+    <MealLogContext.Provider value={{ meals, addMeal, updateMeal, getMealById, loading }}>
       {children}
     </MealLogContext.Provider>
   );

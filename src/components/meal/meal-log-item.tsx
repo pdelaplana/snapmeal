@@ -1,7 +1,10 @@
+
 import type { Meal } from '@/types';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import Image from 'next/image';
-import { CalendarDays, Flame, Beef, Wheat, Drumstick } from 'lucide-react';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { CalendarDays, Flame, Beef, Wheat, Drumstick, Pencil } from 'lucide-react';
 
 interface MealLogItemProps {
   meal: Meal;
@@ -10,7 +13,7 @@ interface MealLogItemProps {
 export default function MealLogItem({ meal }: MealLogItemProps) {
   return (
     <Card className="overflow-hidden shadow-lg transition-all hover:shadow-xl">
-      <CardHeader className="p-0">
+      <CardHeader className="relative p-0">
         {meal.photoDataUri && (
           <div className="aspect-video w-full overflow-hidden">
              <Image
@@ -23,11 +26,16 @@ export default function MealLogItem({ meal }: MealLogItemProps) {
             />
           </div>
         )}
+        <Link href={`/edit-meal/${meal.id}`} passHref legacyBehavior>
+          <Button asChild variant="outline" size="icon" className="absolute right-2 top-2 bg-background/70 hover:bg-background">
+            <a><Pencil className="h-4 w-4" /></a>
+          </Button>
+        </Link>
       </CardHeader>
       <CardContent className="p-4 md:p-6">
         <div className="mb-3 flex items-center text-sm text-muted-foreground">
           <CalendarDays className="mr-2 h-4 w-4" />
-          <span>{new Date(meal.timestamp).toLocaleDateString()} - {new Date(meal.timestamp).toLocaleTimeString()}</span>
+          <span>{new Date(meal.timestamp).toLocaleDateString()} - {new Date(meal.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
         </div>
         
         <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
@@ -63,7 +71,7 @@ export default function MealLogItem({ meal }: MealLogItemProps) {
         {meal.notes && (
           <div className="mt-3">
             <p className="text-xs font-medium text-foreground">Notes:</p>
-            <p className="text-xs text-muted-foreground">{meal.notes}</p>
+            <p className="text-xs text-muted-foreground whitespace-pre-wrap break-words">{meal.notes}</p>
           </div>
         )}
       </CardContent>
