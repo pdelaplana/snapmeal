@@ -3,10 +3,19 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Utensils, LogOut, ArrowLeft } from "lucide-react";
+import { Utensils, LogOut, ArrowLeft, User, Settings2, ChevronDown } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import { useRouter, usePathname } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function SiteHeader() {
   const { user, mockSignOut } = useAuth();
@@ -16,7 +25,7 @@ export default function SiteHeader() {
 
   const handleSignOut = async () => {
     mockSignOut();
-    toast({ title: "Logged Out (Mocked)", description: "You have been successfully logged out." });
+    toast({ title: "Logged Out", description: "You have been successfully logged out." });
     router.push("/login");
   };
 
@@ -24,8 +33,8 @@ export default function SiteHeader() {
     router.back();
   };
 
-  // Only show the back button if not on the dashboard page
   const showBackButton = pathname !== '/dashboard';
+  const userInitial = user?.email ? user.email.charAt(0).toUpperCase() : "?";
 
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur">
@@ -44,15 +53,44 @@ export default function SiteHeader() {
         </div>
         <nav className="flex items-center space-x-4">
           {user && (
-            <>
-              <span className="hidden text-sm text-muted-foreground sm:inline">
-                {user.email}
-              </span>
-              <Button variant="ghost" size="icon" onClick={handleSignOut} title="Logout">
-                <LogOut className="h-5 w-5" />
-                <span className="sr-only">Logout</span>
-              </Button>
-            </>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="flex items-center gap-2 px-2 py-1 h-auto sm:px-3">
+                  <Avatar className="h-7 w-7 sm:h-8 sm:w-8">
+                    {/* Placeholder for user avatar image if available */}
+                    {/* <AvatarImage src="https://github.com/shadcn.png" alt="@shadcn" /> */}
+                    <AvatarFallback className="bg-primary text-primary-foreground text-xs sm:text-sm">
+                      {userInitial}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="hidden text-sm font-medium text-foreground sm:inline-block">
+                    {user.email}
+                  </span>
+                  <ChevronDown className="h-4 w-4 text-muted-foreground sm:ml-1" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <Link href="/profile" passHref>
+                  <DropdownMenuItem>
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Profile</span>
+                  </DropdownMenuItem>
+                </Link>
+                <Link href="/account" passHref>
+                  <DropdownMenuItem>
+                    <Settings2 className="mr-2 h-4 w-4" />
+                    <span>Account Settings</span>
+                  </DropdownMenuItem>
+                </Link>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleSignOut}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Logout</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
         </nav>
       </div>
