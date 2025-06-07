@@ -33,6 +33,10 @@ export default function MealLogItem({ meal }: MealLogItemProps) {
     }
   }
 
+  const mealDateTime = new Date(meal.timestamp);
+  const formattedDate = mealDateTime.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+  const formattedTime = mealDateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+
   return (
     <Card className="overflow-hidden shadow-lg transition-all hover:shadow-xl">
       <CardHeader className="relative p-0">
@@ -57,14 +61,11 @@ export default function MealLogItem({ meal }: MealLogItemProps) {
       <CardContent className="p-4 md:p-6">
         <div className="mb-3">
           <h3 className="text-xl font-semibold text-foreground">{titleToDisplay}</h3>
-          <p className="text-xs text-muted-foreground">
-            {new Date(meal.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
-          </p>
         </div>
         
         <div className="mb-3 flex items-center text-sm text-muted-foreground">
           <CalendarDays className="mr-2 h-4 w-4" />
-          <span>{new Date(meal.timestamp).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span>
+          <span>{`${formattedDate}, ${formattedTime}`}</span>
         </div>
         
         <div className="mb-3 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
