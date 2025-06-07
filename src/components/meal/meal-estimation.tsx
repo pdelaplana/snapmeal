@@ -1,16 +1,16 @@
 
 import type { EstimateCaloriesMacrosOutput } from '@/ai/flows/estimate-calories-macros';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Flame, Beef, Wheat, Drumstick, AlertCircle } from 'lucide-react';
+import { Flame, Beef, Wheat, Drumstick } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface MealEstimationProps {
   estimation: EstimateCaloriesMacrosOutput | null;
   isLoading: boolean;
+  descriptionUsedForEstimation?: boolean | null;
 }
 
-export default function MealEstimation({ estimation, isLoading }: MealEstimationProps) {
+export default function MealEstimation({ estimation, isLoading, descriptionUsedForEstimation }: MealEstimationProps) {
   if (isLoading) {
     return (
       <Card className="shadow-lg">
@@ -31,14 +31,11 @@ export default function MealEstimation({ estimation, isLoading }: MealEstimation
     return null; 
   }
 
-  // Check if a meal was detected and if the necessary estimation data is present (not null or undefined)
   if (!estimation.isMealDetected || estimation.estimatedCalories == null || !estimation.macroBreakdown) {
-    // If no meal was detected, or if estimation data is missing, don't show the nutrition card.
-    // The parent page (AddMealPage) is responsible for showing a toast notification in these cases.
     return null;
   }
 
-  const { estimatedCalories, macroBreakdown } = estimation; // These are now guaranteed to be non-null
+  const { estimatedCalories, macroBreakdown } = estimation;
   const totalMacros = macroBreakdown.protein + macroBreakdown.carbs + macroBreakdown.fat;
   const proteinPercentage = totalMacros > 0 ? (macroBreakdown.protein / totalMacros) * 100 : 0;
   const carbsPercentage = totalMacros > 0 ? (macroBreakdown.carbs / totalMacros) * 100 : 0;
@@ -49,6 +46,13 @@ export default function MealEstimation({ estimation, isLoading }: MealEstimation
     <Card className="shadow-lg">
       <CardHeader>
         <CardTitle className="text-xl font-semibold">Estimated Nutrition</CardTitle>
+        {typeof descriptionUsedForEstimation === 'boolean' && (
+          <p className="pt-1 text-xs text-muted-foreground">
+            {descriptionUsedForEstimation
+              ? 'Enhanced by your description.'
+              : 'Based on photo only. Providing a description can improve accuracy.'}
+          </p>
+        )}
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="flex items-center justify-between rounded-lg bg-primary/10 p-4">

@@ -45,6 +45,8 @@ export default function EditMealPage() {
   const [notes, setNotes] = useState('');
   const [isEstimating, setIsEstimating] = useState(false);
   const [pageState, setPageState] = useState<PageState>('loading');
+  const [descriptionUsedInLastEstimate, setDescriptionUsedInLastEstimate] = useState<boolean | null>(null);
+
 
   useEffect(() => {
     if (mealLogLoading) {
@@ -75,6 +77,7 @@ export default function EditMealPage() {
           fat: mealToEdit.fat,
         },
       });
+      setDescriptionUsedInLastEstimate(null); // Original estimate conditions are unknown for the meter
       setPageState('loaded');
     } else {
       toast({ variant: 'destructive', title: 'Meal not found', description: `The meal you're trying to edit doesn't exist or could not be loaded.` });
@@ -85,6 +88,8 @@ export default function EditMealPage() {
 
   const handlePhotoCaptured = useCallback((dataUri: string) => {
     setPhotoDataUri(dataUri);
+    setEstimation(null); // New photo means previous estimation is invalid
+    setDescriptionUsedInLastEstimate(null); // Reset meter
   }, []);
 
   const handleEstimate = async () => {
@@ -93,6 +98,7 @@ export default function EditMealPage() {
       return;
     }
     setIsEstimating(true);
+    setDescriptionUsedInLastEstimate(!!mealDescription.trim());
     try {
       const result = await estimateCaloriesMacros({ photoDataUri, mealDescription });
       setEstimation(result);
@@ -107,6 +113,8 @@ export default function EditMealPage() {
     } catch (error: any) {
       console.error('Error estimating calories:', error);
       toast({ variant: 'destructive', title: 'Estimation Failed', description: error.message || 'Could not estimate nutrition. Please try again.' });
+      setEstimation(null); // Clear estimation on error for re-estimation
+      setDescriptionUsedInLastEstimate(null); // Clear flag as well
     } finally {
       setIsEstimating(false);
     }
@@ -222,7 +230,11 @@ export default function EditMealPage() {
             </div>
           )}
 
-          <MealEstimation estimation={estimation} isLoading={isEstimating} />
+          <MealEstimation 
+            estimation={estimation} 
+            isLoading={isEstimating}
+            descriptionUsedForEstimation={descriptionUsedInLastEstimate}
+          />
           
           <div className="space-y-6 rounded-lg border bg-card p-6 shadow-md">
             <div>
@@ -270,3 +282,4 @@ export default function EditMealPage() {
     </AppLayout>
   );
 }
+

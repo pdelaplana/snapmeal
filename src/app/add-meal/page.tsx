@@ -22,14 +22,16 @@ export default function AddMealPage() {
   const [estimation, setEstimation] = useState<EstimateCaloriesMacrosOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [notes, setNotes] = useState('');
+  const [descriptionUsedInLastEstimate, setDescriptionUsedInLastEstimate] = useState<boolean | null>(null);
   const { toast } = useToast();
   const { addMeal } = useMealLog();
   const router = useRouter();
 
   const handlePhotoCaptured = (dataUri: string) => {
     setPhotoDataUri(dataUri);
-    setEstimation(null); // Clear previous estimation if new photo is captured
-    setMealDescription(''); // Clear description as well
+    setEstimation(null); 
+    setMealDescription(''); 
+    setDescriptionUsedInLastEstimate(null);
   };
 
   const handleEstimate = async () => {
@@ -39,22 +41,23 @@ export default function AddMealPage() {
     }
     setIsLoading(true);
     setEstimation(null);
+    setDescriptionUsedInLastEstimate(!!mealDescription.trim());
     try {
       const result = await estimateCaloriesMacros({ photoDataUri, mealDescription });
-      setEstimation(result); // Store the full AI response
+      setEstimation(result); 
 
       if (result.isMealDetected && result.estimatedCalories != null && result.macroBreakdown != null) {
         toast({ title: 'Estimation Complete', description: 'Nutritional values have been estimated.' });
       } else if (!result.isMealDetected) {
         toast({ variant: 'destructive', title: 'Meal Not Detected', icon: <AlertTriangle className="h-5 w-5" />, description: 'The AI could not detect a meal in the photo. Please try a different image or add a description.' });
       } else {
-        // This case might happen if isMealDetected is true but estimation fields are null/undefined
-        // which shouldn't happen with the current AI logic but good to be aware of.
         toast({ variant: 'destructive', title: 'Estimation Incomplete', icon: <AlertTriangle className="h-5 w-5" />, description: 'The AI detected a meal but could not provide full nutritional estimates.' });
       }
     } catch (error: any) {
       console.error('Error estimating calories:', error);
       toast({ variant: 'destructive', title: 'Estimation Failed', description: error.message || 'Could not estimate nutrition. Please try again.' });
+      setEstimation(null); // Ensure estimation is cleared on error
+      setDescriptionUsedInLastEstimate(null); // Also clear description used flag
     } finally {
       setIsLoading(false);
     }
@@ -128,7 +131,11 @@ export default function AddMealPage() {
             </div>
           )}
 
-          <MealEstimation estimation={estimation} isLoading={isLoading} />
+          <MealEstimation 
+            estimation={estimation} 
+            isLoading={isLoading} 
+            descriptionUsedForEstimation={descriptionUsedInLastEstimate} 
+          />
           
           {canLogMeal && (
             <div className="space-y-6 rounded-lg border bg-card p-6 shadow-md">
