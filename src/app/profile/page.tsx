@@ -7,12 +7,12 @@ import { useMealLog } from "@/context/meal-log-context";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Settings, BarChart3, ChevronRight, Palette, Camera } from "lucide-react";
+import { Settings, BarChart3, ChevronRight, Palette, Camera, Edit2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { format, startOfDay } from "date-fns";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import MealCapture from "@/components/meal/meal-capture"; // Reusing MealCapture
+import MealCapture from "@/components/meal/meal-capture";
 
 const PROFILE_PHOTO_STORAGE_KEY = 'snapmeal_profile_photo_uri';
 
@@ -20,6 +20,7 @@ export default function ProfilePage() {
   const { user } = useAuth();
   const { meals } = useMealLog();
   const [profilePhotoUri, setProfilePhotoUri] = useState<string | null>(null);
+  const [isEditingPhoto, setIsEditingPhoto] = useState(false);
 
   useEffect(() => {
     const storedPhotoUri = localStorage.getItem(PROFILE_PHOTO_STORAGE_KEY);
@@ -33,6 +34,7 @@ export default function ProfilePage() {
       setProfilePhotoUri(dataUri);
       localStorage.setItem(PROFILE_PHOTO_STORAGE_KEY, dataUri);
     } else {
+      // If dataUri is empty (photo removed in MealCapture), clear it
       setProfilePhotoUri(null);
       localStorage.removeItem(PROFILE_PHOTO_STORAGE_KEY);
     }
@@ -62,34 +64,45 @@ export default function ProfilePage() {
       <div className="container mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="mb-8 text-center">
           <Avatar className="mx-auto mb-4 h-24 w-24 text-3xl">
-            <AvatarImage src={profilePhotoUri || undefined} alt={user.email || "User"} data-ai-hint="person portrait" />
+            <AvatarImage src={profilePhotoUri || undefined} alt={user.email || "User"} data-ai-hint="person portrait"/>
             <AvatarFallback className="bg-primary text-primary-foreground">
               {userInitial}
             </AvatarFallback>
           </Avatar>
           <h1 className="font-headline text-3xl font-bold text-foreground">Your Profile</h1>
           <p className="text-muted-foreground">{user.email}</p>
+          {!isEditingPhoto && (
+            <Button onClick={() => setIsEditingPhoto(true)} variant="outline" className="mt-4">
+              <Edit2 className="mr-2 h-4 w-4" />
+              Change Profile Photo
+            </Button>
+          )}
         </div>
 
         <div className="space-y-8">
-          <Card className="shadow-md">
-            <CardHeader>
-              <CardTitle className="flex items-center text-xl">
-                <Camera className="mr-3 h-6 w-6 text-primary" />
-                Profile Photo
-              </CardTitle>
-              <CardDescription>Update your profile picture by uploading an image or taking a new one.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <MealCapture 
-                onPhotoCaptured={handleProfilePhotoCaptured} 
-                initialPhotoDataUri={profilePhotoUri}
-              />
-              <p className="mt-2 text-xs text-muted-foreground">
-                Note: Labels in the photo capture tool might refer to "meal photo". This tool is reused for profile picture functionality.
-              </p>
-            </CardContent>
-          </Card>
+          {isEditingPhoto && (
+            <Card className="shadow-md">
+              <CardHeader>
+                <CardTitle className="flex items-center text-xl">
+                  <Camera className="mr-3 h-6 w-6 text-primary" />
+                  Update Profile Photo
+                </CardTitle>
+                <CardDescription>Upload an image or take a new one with your camera.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <MealCapture 
+                  onPhotoCaptured={handleProfilePhotoCaptured} 
+                  initialPhotoDataUri={profilePhotoUri}
+                />
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Note: Labels in the photo capture tool might refer to "meal photo". This tool is reused for profile picture functionality.
+                </p>
+                <Button onClick={() => setIsEditingPhoto(false)} variant="default" className="mt-4 w-full">
+                  Done Editing Photo
+                </Button>
+              </CardContent>
+            </Card>
+          )}
 
           <Card className="shadow-md">
             <CardHeader>
