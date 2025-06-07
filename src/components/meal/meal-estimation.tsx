@@ -1,8 +1,9 @@
 
 import type { EstimateCaloriesMacrosOutput } from '@/ai/flows/estimate-calories-macros';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Flame, Beef, Wheat, Drumstick } from 'lucide-react';
+import { Flame, Beef, Wheat, Drumstick, Info } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface MealEstimationProps {
   estimation: EstimateCaloriesMacrosOutput | null;
@@ -47,24 +48,14 @@ export default function MealEstimation({ estimation, isLoading, descriptionUsedF
       <CardHeader>
         <CardTitle className="text-xl font-semibold">Estimated Nutrition</CardTitle>
         {typeof descriptionUsedForEstimation === 'boolean' && (
-          <div className="pt-3 space-y-1">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-medium text-muted-foreground">Input used:</span>
-              <span className="font-semibold text-foreground">
-                {descriptionUsedForEstimation ? "Photo + Description" : "Photo Only"}
-              </span>
-            </div>
-            <Progress 
-              value={descriptionUsedForEstimation ? 100 : 60} 
-              className="h-1.5 w-full"
-              aria-label={descriptionUsedForEstimation ? "Estimation based on photo and description" : "Estimation based on photo only"}
-            />
-            {descriptionUsedForEstimation === false && (
-              <p className="text-xs text-muted-foreground pt-0.5">
-                Tip: Adding a description can improve estimation accuracy.
-              </p>
-            )}
-          </div>
+          <Alert variant="default" className="mt-3">
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              {descriptionUsedForEstimation
+                ? "This estimation was enhanced by your provided description."
+                : "This estimation is based on the photo only. Tip: Adding a description can improve accuracy."}
+            </AlertDescription>
+          </Alert>
         )}
       </CardHeader>
       <CardContent className="space-y-6">
