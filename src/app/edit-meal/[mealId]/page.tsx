@@ -20,6 +20,7 @@ import { LoadingSpinner } from '@/components/loading-spinner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { Switch } from "@/components/ui/switch";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -49,7 +50,7 @@ export default function EditMealPage() {
   const [initialMealData, setInitialMealData] = useState<Meal | null>(null);
   const [photoDataUri, setPhotoDataUri] = useState<string | null>(null);
   const [mealDescription, setMealDescription] = useState('');
-  const [aiEstimation, setAiEstimation] = useState<EstimateCaloriesMacrosOutput | null>(null); // Renamed from estimation
+  const [aiEstimation, setAiEstimation] = useState<EstimateCaloriesMacrosOutput | null>(null); 
   const [notes, setNotes] = useState('');
   const [selectedMealType, setSelectedMealType] = useState<Meal['mealType'] | undefined>(undefined);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
@@ -58,6 +59,7 @@ export default function EditMealPage() {
   const [pageState, setPageState] = useState<PageState>('loading');
   const [descriptionUsedInLastEstimate, setDescriptionUsedInLastEstimate] = useState<boolean | null>(null);
   const [selectedEstimationType, setSelectedEstimationType] = useState<EstimationType>('calories_macros');
+  const [showManualInputs, setShowManualInputs] = useState(true);
 
   // State for manual overrides
   const [manualCalories, setManualCalories] = useState<string>('');
@@ -102,18 +104,16 @@ export default function EditMealPage() {
       }
       setSelectedEstimationType(initialEstType);
 
-      // Populate manual fields from loaded meal data
       setManualCalories(mealToEdit.estimatedCalories?.toString() ?? '');
       setManualProtein(mealToEdit.protein?.toString() ?? '');
       setManualCarbs(mealToEdit.carbs?.toString() ?? '');
       setManualFat(mealToEdit.fat?.toString() ?? '');
 
-      // Set AI estimation display based on loaded meal data
       setAiEstimation({
         isMealDetected: true, 
         estimatedCalories: mealToEdit.estimatedCalories,
         macroBreakdown: (mealToEdit.protein != null || mealToEdit.carbs != null || mealToEdit.fat != null) ? {
-          protein: mealToEdit.protein ?? 0, // Default to 0 if null, for schema
+          protein: mealToEdit.protein ?? 0,
           carbs: mealToEdit.carbs ?? 0,
           fat: mealToEdit.fat ?? 0,
         } : null,
@@ -128,9 +128,8 @@ export default function EditMealPage() {
   }, [mealLogLoading, mealId, getMealById, router, toast]);
 
 
-  // Effect to populate manual fields from AI estimation or clear them based on estimation type
   useEffect(() => {
-    if (pageState !== 'loaded' || isEstimating) return; // Only run if page is loaded and not during an active AI estimation
+    if (pageState !== 'loaded' || isEstimating) return; 
 
     if (aiEstimation && aiEstimation.isMealDetected) {
       if (selectedEstimationType === 'calories_macros' || selectedEstimationType === 'calories_only') {
@@ -147,13 +146,12 @@ export default function EditMealPage() {
         setManualCarbs('');
         setManualFat('');
       }
-    } else if (aiEstimation && !aiEstimation.isMealDetected) { // Clear fields if no meal detected
+    } else if (aiEstimation && !aiEstimation.isMealDetected) { 
         setManualCalories('');
         setManualProtein('');
         setManualCarbs('');
         setManualFat('');
     }
-    // If aiEstimation is null (e.g. photo removed), fields are cleared by handlePhotoCaptured or initial state
   }, [aiEstimation, selectedEstimationType, pageState, isEstimating]);
 
 
@@ -161,7 +159,6 @@ export default function EditMealPage() {
     setPhotoDataUri(dataUri);
     setAiEstimation(null); 
     setDescriptionUsedInLastEstimate(null); 
-    // Clear manual fields when photo changes, as estimation will be new
     setManualCalories('');
     setManualProtein('');
     setManualCarbs('');
@@ -181,7 +178,7 @@ export default function EditMealPage() {
         mealDescription,
         estimationType: selectedEstimationType
       });
-      setAiEstimation(result); // This will trigger the useEffect to update manual fields
+      setAiEstimation(result); 
 
       if (!result.isMealDetected) {
         toast({ variant: 'destructive', title: 'Meal Not Detected', icon: <AlertTriangle className="h-5 w-5" />, description: 'The AI could not detect a meal in the photo. Please try a different image or add a description.' });
@@ -197,7 +194,6 @@ export default function EditMealPage() {
     } catch (error: any) {
       console.error('Error re-estimating nutrition:', error);
       toast({ variant: 'destructive', title: 'Re-estimation Failed', description: error.message || 'Could not re-estimate nutrition. Please try again.' });
-       // Fallback to initial if re-estimation fails and data exists
       setAiEstimation(initialMealData ? {
         isMealDetected: true,
         estimatedCalories: initialMealData.estimatedCalories,
@@ -332,7 +328,6 @@ export default function EditMealPage() {
                     value={selectedEstimationType}
                     onValueChange={(value) => {
                       setSelectedEstimationType(value as EstimationType);
-                      // aiEstimation will be used by useEffect to update manual fields
                     }}
                   >
                     <SelectTrigger id="estimationTypeEdit" className="mt-2">
@@ -439,63 +434,76 @@ export default function EditMealPage() {
                 </Select>
               </div>
 
-              {/* Manual Input Fields */}
-              {(selectedEstimationType === 'calories_macros' || selectedEstimationType === 'calories_only') && (
-                <div>
-                  <Label htmlFor="manualCaloriesEdit">Logged Calories (kcal)</Label>
-                  <Input
-                    id="manualCaloriesEdit"
-                    type="number"
-                    placeholder="e.g., 500"
-                    value={manualCalories}
-                    onChange={(e) => setManualCalories(e.target.value)}
-                    className="mt-2"
-                    min="0"
-                  />
-                </div>
-              )}
-              {(selectedEstimationType === 'calories_macros' || selectedEstimationType === 'macros_only') && (
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                  <div>
-                    <Label htmlFor="manualProteinEdit">Logged Protein (g)</Label>
-                    <Input
-                      id="manualProteinEdit"
-                      type="number"
-                      placeholder="e.g., 30"
-                      value={manualProtein}
-                      onChange={(e) => setManualProtein(e.target.value)}
-                      className="mt-2"
-                      min="0"
-                      step="0.1"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="manualCarbsEdit">Logged Carbs (g)</Label>
-                    <Input
-                      id="manualCarbsEdit"
-                      type="number"
-                      placeholder="e.g., 50"
-                      value={manualCarbs}
-                      onChange={(e) => setManualCarbs(e.target.value)}
-                      className="mt-2"
-                      min="0"
-                      step="0.1"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="manualFatEdit">Logged Fat (g)</Label>
-                    <Input
-                      id="manualFatEdit"
-                      type="number"
-                      placeholder="e.g., 20"
-                      value={manualFat}
-                      onChange={(e) => setManualFat(e.target.value)}
-                      className="mt-2"
-                      min="0"
-                      step="0.1"
-                    />
-                  </div>
-                </div>
+              <div className="flex items-center space-x-2 py-2">
+                <Switch
+                  id="toggle-manual-inputs-edit"
+                  checked={showManualInputs}
+                  onCheckedChange={setShowManualInputs}
+                  aria-label="Toggle manual nutrition inputs"
+                />
+                <Label htmlFor="toggle-manual-inputs-edit" className="text-md cursor-pointer">Manually Adjust Nutrition</Label>
+              </div>
+
+              {showManualInputs && (
+                <>
+                  {(selectedEstimationType === 'calories_macros' || selectedEstimationType === 'calories_only') && (
+                    <div>
+                      <Label htmlFor="manualCaloriesEdit">Logged Calories (kcal)</Label>
+                      <Input
+                        id="manualCaloriesEdit"
+                        type="number"
+                        placeholder="e.g., 500"
+                        value={manualCalories}
+                        onChange={(e) => setManualCalories(e.target.value)}
+                        className="mt-2"
+                        min="0"
+                      />
+                    </div>
+                  )}
+                  {(selectedEstimationType === 'calories_macros' || selectedEstimationType === 'macros_only') && (
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                      <div>
+                        <Label htmlFor="manualProteinEdit">Logged Protein (g)</Label>
+                        <Input
+                          id="manualProteinEdit"
+                          type="number"
+                          placeholder="e.g., 30"
+                          value={manualProtein}
+                          onChange={(e) => setManualProtein(e.target.value)}
+                          className="mt-2"
+                          min="0"
+                          step="0.1"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="manualCarbsEdit">Logged Carbs (g)</Label>
+                        <Input
+                          id="manualCarbsEdit"
+                          type="number"
+                          placeholder="e.g., 50"
+                          value={manualCarbs}
+                          onChange={(e) => setManualCarbs(e.target.value)}
+                          className="mt-2"
+                          min="0"
+                          step="0.1"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="manualFatEdit">Logged Fat (g)</Label>
+                        <Input
+                          id="manualFatEdit"
+                          type="number"
+                          placeholder="e.g., 20"
+                          value={manualFat}
+                          onChange={(e) => setManualFat(e.target.value)}
+                          className="mt-2"
+                          min="0"
+                          step="0.1"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
 
               <div>

@@ -19,6 +19,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { Switch } from "@/components/ui/switch";
 import { mealTypes, estimationTypes, type Meal, type EstimationType } from '@/types';
 import { format } from 'date-fns';
 import { cn } from "@/lib/utils";
@@ -35,6 +36,7 @@ export default function AddMealPage() {
   const [selectedTime, setSelectedTime] = useState<string>(format(new Date(), "HH:mm"));
   const [descriptionUsedInLastEstimate, setDescriptionUsedInLastEstimate] = useState<boolean | null>(null);
   const [selectedEstimationType, setSelectedEstimationType] = useState<EstimationType>('calories_macros');
+  const [showManualInputs, setShowManualInputs] = useState(true);
 
   // State for manual overrides
   const [manualCalories, setManualCalories] = useState<string>('');
@@ -50,7 +52,6 @@ export default function AddMealPage() {
     setPhotoDataUri(dataUri);
     setEstimation(null); 
     setDescriptionUsedInLastEstimate(null);
-    // Clear manual fields when photo changes, as estimation will be new
     setManualCalories('');
     setManualProtein('');
     setManualCarbs('');
@@ -94,7 +95,6 @@ export default function AddMealPage() {
     }
   };
 
-  // Effect to populate manual fields from AI estimation or clear them based on estimation type
   useEffect(() => {
     if (estimation && estimation.isMealDetected) {
       if (selectedEstimationType === 'calories_macros' || selectedEstimationType === 'calories_only') {
@@ -111,13 +111,12 @@ export default function AddMealPage() {
         setManualCarbs('');
         setManualFat('');
       }
-    } else if (estimation && !estimation.isMealDetected) { // Clear fields if no meal detected
+    } else if (estimation && !estimation.isMealDetected) {
         setManualCalories('');
         setManualProtein('');
         setManualCarbs('');
         setManualFat('');
     }
-    // If estimation is null (e.g. photo removed), fields are cleared by handlePhotoCaptured or initial state
   }, [estimation, selectedEstimationType]);
 
 
@@ -143,7 +142,7 @@ export default function AddMealPage() {
     if (selectedEstimationType === 'macros_only') {
       return isValidNumberString(manualProtein) && isValidNumberString(manualCarbs) && isValidNumberString(manualFat);
     }
-    return false; // Should not happen if selectedEstimationType is valid
+    return false; 
   };
   
   const handleLogMeal = () => {
@@ -248,7 +247,7 @@ export default function AddMealPage() {
             estimationType={selectedEstimationType}
           />
           
-          {photoDataUri && ( // Only show logging section if there's a photo
+          {photoDataUri && ( 
             <Card className="shadow-md">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -314,64 +313,78 @@ export default function AddMealPage() {
                   </Select>
                 </div>
 
-                {/* Manual Input Fields */}
-                {(selectedEstimationType === 'calories_macros' || selectedEstimationType === 'calories_only') && (
-                  <div>
-                    <Label htmlFor="manualCalories">Calories (kcal)</Label>
-                    <Input
-                      id="manualCalories"
-                      type="number"
-                      placeholder="e.g., 500"
-                      value={manualCalories}
-                      onChange={(e) => setManualCalories(e.target.value)}
-                      className="mt-2"
-                      min="0"
-                    />
-                  </div>
+                <div className="flex items-center space-x-2 py-2">
+                  <Switch
+                    id="toggle-manual-inputs"
+                    checked={showManualInputs}
+                    onCheckedChange={setShowManualInputs}
+                    aria-label="Toggle manual nutrition inputs"
+                  />
+                  <Label htmlFor="toggle-manual-inputs" className="text-md cursor-pointer">Manually Adjust Nutrition</Label>
+                </div>
+
+                {showManualInputs && (
+                  <>
+                    {(selectedEstimationType === 'calories_macros' || selectedEstimationType === 'calories_only') && (
+                      <div>
+                        <Label htmlFor="manualCalories">Calories (kcal)</Label>
+                        <Input
+                          id="manualCalories"
+                          type="number"
+                          placeholder="e.g., 500"
+                          value={manualCalories}
+                          onChange={(e) => setManualCalories(e.target.value)}
+                          className="mt-2"
+                          min="0"
+                        />
+                      </div>
+                    )}
+                    {(selectedEstimationType === 'calories_macros' || selectedEstimationType === 'macros_only') && (
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                        <div>
+                          <Label htmlFor="manualProtein">Protein (g)</Label>
+                          <Input
+                            id="manualProtein"
+                            type="number"
+                            placeholder="e.g., 30"
+                            value={manualProtein}
+                            onChange={(e) => setManualProtein(e.target.value)}
+                            className="mt-2"
+                            min="0"
+                            step="0.1"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="manualCarbs">Carbs (g)</Label>
+                          <Input
+                            id="manualCarbs"
+                            type="number"
+                            placeholder="e.g., 50"
+                            value={manualCarbs}
+                            onChange={(e) => setManualCarbs(e.target.value)}
+                            className="mt-2"
+                            min="0"
+                            step="0.1"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="manualFat">Fat (g)</Label>
+                          <Input
+                            id="manualFat"
+                            type="number"
+                            placeholder="e.g., 20"
+                            value={manualFat}
+                            onChange={(e) => setManualFat(e.target.value)}
+                            className="mt-2"
+                            min="0"
+                            step="0.1"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
-                {(selectedEstimationType === 'calories_macros' || selectedEstimationType === 'macros_only') && (
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                    <div>
-                      <Label htmlFor="manualProtein">Protein (g)</Label>
-                      <Input
-                        id="manualProtein"
-                        type="number"
-                        placeholder="e.g., 30"
-                        value={manualProtein}
-                        onChange={(e) => setManualProtein(e.target.value)}
-                        className="mt-2"
-                        min="0"
-                        step="0.1"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="manualCarbs">Carbs (g)</Label>
-                      <Input
-                        id="manualCarbs"
-                        type="number"
-                        placeholder="e.g., 50"
-                        value={manualCarbs}
-                        onChange={(e) => setManualCarbs(e.target.value)}
-                        className="mt-2"
-                        min="0"
-                        step="0.1"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="manualFat">Fat (g)</Label>
-                      <Input
-                        id="manualFat"
-                        type="number"
-                        placeholder="e.g., 20"
-                        value={manualFat}
-                        onChange={(e) => setManualFat(e.target.value)}
-                        className="mt-2"
-                        min="0"
-                        step="0.1"
-                      />
-                    </div>
-                  </div>
-                )}
+
 
                 <div>
                   <Label htmlFor="notes">Optional Notes for Log</Label>
