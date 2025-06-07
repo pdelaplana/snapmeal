@@ -22,7 +22,7 @@ export default function EditMealPage() {
   const params = useParams();
   const mealId = params.mealId as string;
 
-  const { getMealById, updateMeal } = useMealLog();
+  const { getMealById, updateMeal, loading: mealLogLoading } = useMealLog(); // Renamed context loading
   const { toast } = useToast();
 
   const [initialMealData, setInitialMealData] = useState<Meal | null>(null);
@@ -30,41 +30,50 @@ export default function EditMealPage() {
   const [mealDescription, setMealDescription] = useState(''); // For AI estimation
   const [estimation, setEstimation] = useState<EstimateCaloriesMacrosOutput | null>(null);
   const [notes, setNotes] = useState(''); // For user's log
-  const [isLoading, setIsLoading] = useState(false); // For AI estimation loading
+  const [isEstimating, setIsEstimating] = useState(false); // For AI estimation loading
   const [isPageLoading, setIsPageLoading] = useState(true); // For initial meal data loading
 
   useEffect(() => {
-    if (mealId) {
-      const mealToEdit = getMealById(mealId);
-      if (mealToEdit) {
-        setInitialMealData(mealToEdit);
-        setPhotoDataUri(mealToEdit.photoDataUri);
-        // mealDescription for AI is kept separate from logged notes for clarity during edit
-        // User can add a description if they want to re-estimate
-        setMealDescription(''); 
-        setNotes(mealToEdit.notes || '');
-        setEstimation({
-          isMealDetected: true, // Assume meal was detected if it's in the log
-          estimatedCalories: mealToEdit.estimatedCalories,
-          macroBreakdown: {
-            protein: mealToEdit.protein,
-            carbs: mealToEdit.carbs,
-            fat: mealToEdit.fat,
-          },
-        });
-      } else {
-        toast({ variant: 'destructive', title: 'Meal not found', description: 'Could not find the meal you want to edit.' });
-        router.replace('/dashboard');
-      }
-      setIsPageLoading(false);
+    if (!mealId) {
+      // Should not happen if routing is correct, but as a safeguard
+      toast({ variant: 'destructive', title: 'Error', description: 'Meal ID is missing.' });
+      router.replace('/dashboard');
+      return;
     }
-  }, [mealId, getMealById, router, toast]);
+
+    if (mealLogLoading) {
+      setIsPageLoading(true); // Keep showing spinner if context is loading
+      return;
+    }
+
+    // mealLogLoading is false here, so we can safely try to get the meal
+    const mealToEdit = getMealById(mealId);
+    if (mealToEdit) {
+      setInitialMealData(mealToEdit);
+      setPhotoDataUri(mealToEdit.photoDataUri);
+      setMealDescription('');
+      setNotes(mealToEdit.notes || '');
+      setEstimation({
+        isMealDetected: true,
+        estimatedCalories: mealToEdit.estimatedCalories,
+        macroBreakdown: {
+          protein: mealToEdit.protein,
+          carbs: mealToEdit.carbs,
+          fat: mealToEdit.fat,
+        },
+      });
+      setIsPageLoading(false); // Page data is now ready
+    } else {
+      // Meal log is loaded, but meal with this ID wasn't found
+      toast({ variant: 'destructive', title: 'Meal not found', description: 'Could not find the meal you want to edit.' });
+      router.replace('/dashboard');
+      // setIsPageLoading(false); // Not strictly needed as redirection will occur
+    }
+  }, [mealId, getMealById, router, toast, mealLogLoading]); // Added mealLogLoading to dependencies
 
   const handlePhotoCaptured = useCallback((dataUri: string) => {
     setPhotoDataUri(dataUri);
-    // If photo changes, user might want to re-estimate. Clear old AI description.
-    // Estimation itself is not cleared, user must click "Estimate Nutrition"
-    setMealDescription(''); 
+    setMealDescription('');
   }, []);
 
   const handleEstimate = async () => {
@@ -72,8 +81,7 @@ export default function EditMealPage() {
       toast({ variant: 'destructive', title: 'No Photo', description: 'Please ensure a photo is present to estimate nutrition.' });
       return;
     }
-    setIsLoading(true);
-    // setEstimation(null); // Clear previous estimation before new one
+    setIsEstimating(true);
     try {
       const result = await estimateCaloriesMacros({ photoDataUri, mealDescription });
       setEstimation(result);
@@ -89,13 +97,13 @@ export default function EditMealPage() {
       console.error('Error estimating calories:', error);
       toast({ variant: 'destructive', title: 'Estimation Failed', description: error.message || 'Could not estimate nutrition. Please try again.' });
     } finally {
-      setIsLoading(false);
+      setIsEstimating(false);
     }
   };
 
   const handleUpdateMeal = () => {
     if (!initialMealData) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Meal data is missing.' });
+        toast({ variant: 'destructive', title: 'Error', description: 'Original meal data is missing.' });
         return;
     }
     if (!photoDataUri) {
@@ -119,7 +127,7 @@ export default function EditMealPage() {
     router.push('/dashboard');
   };
 
-  if (isPageLoading) {
+  if (isPageLoading || mealLogLoading) { // Check both loading states
     return (
       <AppLayout>
         <div className="flex min-h-[calc(100vh-150px)] items-center justify-center">
@@ -130,7 +138,7 @@ export default function EditMealPage() {
   }
 
   if (!initialMealData) {
-    // This case should ideally be handled by the redirect in useEffect, but as a fallback:
+    // This case should now only be hit if meal truly doesn't exist after context load
     return (
       <AppLayout>
         <div className="container mx-auto max-w-3xl px-4 py-8 text-center">
@@ -159,7 +167,7 @@ export default function EditMealPage() {
             initialPhotoDataUri={photoDataUri} 
           />
 
-          {photoDataUri && ( // Only show estimation section if there's a photo
+          {photoDataUri && (
             <div className="space-y-4 rounded-lg border bg-card p-6 shadow-md">
               <div>
                 <Label htmlFor="mealDescription" className="text-md font-medium">
@@ -180,8 +188,8 @@ export default function EditMealPage() {
                 </Alert>
               </div>
               <div className="text-center">
-                <Button onClick={handleEstimate} disabled={isLoading || !photoDataUri} size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground">
-                  {isLoading ? (
+                <Button onClick={handleEstimate} disabled={isEstimating || !photoDataUri} size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground">
+                  {isEstimating ? (
                     <>
                       <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                       Estimating...
@@ -197,7 +205,7 @@ export default function EditMealPage() {
             </div>
           )}
 
-          <MealEstimation estimation={estimation} isLoading={isLoading} />
+          <MealEstimation estimation={estimation} isLoading={isEstimating} />
           
           <div className="space-y-6 rounded-lg border bg-card p-6 shadow-md">
             <div>
@@ -210,7 +218,7 @@ export default function EditMealPage() {
                 className="mt-2 min-h-[100px]"
               />
             </div>
-            <Button onClick={handleUpdateMeal} disabled={!canUpdateMeal} size="lg" className="w-full">
+            <Button onClick={handleUpdateMeal} disabled={!canUpdateMeal || isEstimating} size="lg" className="w-full">
               <Save className="mr-2 h-5 w-5" />
               Update Meal
             </Button>
