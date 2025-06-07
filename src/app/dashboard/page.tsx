@@ -1,10 +1,33 @@
+
+"use client";
+
+import { useState, useEffect } from 'react';
 import AppLayout from "@/components/layout/app-layout";
 import MealLogList from "@/components/meal/meal-log-list";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { PlusCircle } from "lucide-react";
+import { useMealLog } from '@/context/meal-log-context';
+import { isToday } from 'date-fns';
 
 export default function DashboardPage() {
+  const { meals, loading } = useMealLog();
+  const [showMainAddButton, setShowMainAddButton] = useState(false);
+
+  useEffect(() => {
+    if (loading) {
+      setShowMainAddButton(false);
+      return;
+    }
+
+    if (meals.length === 0) {
+      setShowMainAddButton(false);
+    } else {
+      const hasMealsToday = meals.some(meal => isToday(new Date(meal.timestamp)));
+      setShowMainAddButton(hasMealsToday);
+    }
+  }, [meals, loading]);
+
   return (
     <AppLayout>
       <div className="container mx-auto px-4 py-8 sm:px-6 lg:px-8">
@@ -12,12 +35,14 @@ export default function DashboardPage() {
           <h1 className="font-headline text-3xl font-bold text-foreground">
             Your Meal Log
           </h1>
-          <Link href="/add-meal">
-            <Button variant="default" size="lg">
-              <PlusCircle className="mr-2 h-5 w-5" />
-              Add New Meal
-            </Button>
-          </Link>
+          {showMainAddButton && (
+            <Link href="/add-meal">
+              <Button variant="default" size="lg">
+                <PlusCircle className="mr-2 h-5 w-5" />
+                Add New Meal
+              </Button>
+            </Link>
+          )}
         </div>
         <MealLogList />
       </div>

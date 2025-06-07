@@ -99,7 +99,7 @@ export default function MealLogList() {
                         Ready to log your first meal of the day?
                       </p>
                       <Link href="/add-meal" className="mt-4 inline-block">
-                        <Button variant="outline" size="md">
+                        <Button variant="default" size="lg">
                           <PlusCircle className="mr-2 h-4 w-4" />
                           Add Meal
                         </Button>
