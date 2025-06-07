@@ -35,7 +35,7 @@ export function MealLogProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!loading) { 
+    if (!loading) {
       try {
         localStorage.setItem(MEAL_LOG_STORAGE_KEY, JSON.stringify(meals));
       } catch (error) {

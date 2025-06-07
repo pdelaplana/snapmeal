@@ -15,6 +15,8 @@ import { useMealLog } from '@/context/meal-log-context';
 import { useRouter } from 'next/navigation';
 import { Wand2, CheckCircle, Loader2, Info, AlertTriangle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { mealTypes, type Meal } from '@/types';
 
 export default function AddMealPage() {
   const [photoDataUri, setPhotoDataUri] = useState<string | null>(null);
@@ -22,6 +24,7 @@ export default function AddMealPage() {
   const [estimation, setEstimation] = useState<EstimateCaloriesMacrosOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [notes, setNotes] = useState('');
+  const [selectedMealType, setSelectedMealType] = useState<Meal['mealType'] | undefined>(undefined);
   const [descriptionUsedInLastEstimate, setDescriptionUsedInLastEstimate] = useState<boolean | null>(null);
   const { toast } = useToast();
   const { addMeal } = useMealLog();
@@ -56,16 +59,16 @@ export default function AddMealPage() {
     } catch (error: any) {
       console.error('Error estimating calories:', error);
       toast({ variant: 'destructive', title: 'Estimation Failed', description: error.message || 'Could not estimate nutrition. Please try again.' });
-      setEstimation(null); // Ensure estimation is cleared on error
-      setDescriptionUsedInLastEstimate(null); // Also clear description used flag
+      setEstimation(null); 
+      setDescriptionUsedInLastEstimate(null);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleLogMeal = () => {
-    if (!photoDataUri || !estimation || !estimation.isMealDetected || estimation.estimatedCalories == null || !estimation.macroBreakdown) {
-      toast({ variant: 'destructive', title: 'Cannot Log Meal', description: 'Please capture a photo and get a valid estimation first.' });
+    if (!photoDataUri || !estimation || !estimation.isMealDetected || estimation.estimatedCalories == null || !estimation.macroBreakdown || !selectedMealType) {
+      toast({ variant: 'destructive', title: 'Cannot Log Meal', description: 'Please capture a photo, get a valid estimation, and select a meal type.' });
       return;
     }
     addMeal({
@@ -74,13 +77,14 @@ export default function AddMealPage() {
       protein: estimation.macroBreakdown.protein,
       carbs: estimation.macroBreakdown.carbs,
       fat: estimation.macroBreakdown.fat,
+      mealType: selectedMealType,
       notes: notes,
     });
     toast({ title: 'Meal Logged!', description: 'Your meal has been added to your log.' });
     router.push('/dashboard');
   };
   
-  const canLogMeal = estimation && estimation.isMealDetected && estimation.estimatedCalories != null && estimation.macroBreakdown != null && photoDataUri;
+  const canLogMeal = estimation && estimation.isMealDetected && estimation.estimatedCalories != null && estimation.macroBreakdown != null && photoDataUri && selectedMealType;
 
   return (
     <AppLayout>
@@ -137,8 +141,27 @@ export default function AddMealPage() {
             descriptionUsedForEstimation={descriptionUsedInLastEstimate} 
           />
           
-          {canLogMeal && (
+          {estimation?.isMealDetected && estimation.estimatedCalories != null && estimation.macroBreakdown != null && photoDataUri && (
             <div className="space-y-6 rounded-lg border bg-card p-6 shadow-md">
+              <div>
+                <Label htmlFor="mealType" className="text-md font-medium">Meal Type</Label>
+                <Select
+                  onValueChange={(value) => setSelectedMealType(value as Meal['mealType'])}
+                  value={selectedMealType}
+                >
+                  <SelectTrigger id="mealType" className="mt-2">
+                    <SelectValue placeholder="Select meal type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {mealTypes.map((type) => (
+                      <SelectItem key={type} value={type}>
+                        {type}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
                <div>
                 <Label htmlFor="notes" className="text-md font-medium">Optional Notes for Log</Label>
                 <Textarea
@@ -149,7 +172,7 @@ export default function AddMealPage() {
                   className="mt-2 min-h-[100px]"
                 />
               </div>
-              <Button onClick={handleLogMeal} size="lg" className="w-full">
+              <Button onClick={handleLogMeal} size="lg" className="w-full" disabled={!canLogMeal}>
                 <CheckCircle className="mr-2 h-5 w-5" />
                 Log This Meal
               </Button>
