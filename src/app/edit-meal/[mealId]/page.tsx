@@ -14,7 +14,7 @@ import { estimateCaloriesMacros, type EstimateCaloriesMacrosOutput } from '@/ai/
 import { useToast } from '@/hooks/use-toast';
 import { useMealLog } from '@/context/meal-log-context';
 import { mealTypes, estimationTypes, type Meal, type EstimationType } from '@/types';
-import { Wand2, Save, Loader2, Info, AlertTriangle, ChevronLeft, Trash2, CalendarIcon } from 'lucide-react';
+import { Wand2, Save, Loader2, Info, AlertTriangle, ChevronLeft, Trash2, CalendarIcon, Edit3 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { LoadingSpinner } from '@/components/loading-spinner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -33,6 +33,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { format } from 'date-fns';
 import { cn } from "@/lib/utils";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+
 
 type PageState = 'loading' | 'loaded' | 'error';
 
@@ -47,7 +49,7 @@ export default function EditMealPage() {
   const [initialMealData, setInitialMealData] = useState<Meal | null>(null);
   const [photoDataUri, setPhotoDataUri] = useState<string | null>(null);
   const [mealDescription, setMealDescription] = useState('');
-  const [estimation, setEstimation] = useState<EstimateCaloriesMacrosOutput | null>(null);
+  const [aiEstimation, setAiEstimation] = useState<EstimateCaloriesMacrosOutput | null>(null); // Renamed from estimation
   const [notes, setNotes] = useState('');
   const [selectedMealType, setSelectedMealType] = useState<Meal['mealType'] | undefined>(undefined);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
@@ -56,6 +58,12 @@ export default function EditMealPage() {
   const [pageState, setPageState] = useState<PageState>('loading');
   const [descriptionUsedInLastEstimate, setDescriptionUsedInLastEstimate] = useState<boolean | null>(null);
   const [selectedEstimationType, setSelectedEstimationType] = useState<EstimationType>('calories_macros');
+
+  // State for manual overrides
+  const [manualCalories, setManualCalories] = useState<string>('');
+  const [manualProtein, setManualProtein] = useState<string>('');
+  const [manualCarbs, setManualCarbs] = useState<string>('');
+  const [manualFat, setManualFat] = useState<string>('');
 
 
   useEffect(() => {
@@ -79,27 +87,35 @@ export default function EditMealPage() {
       setMealDescription(''); 
       setNotes(mealToEdit.notes || '');
       setSelectedMealType(mealToEdit.mealType);
-      setSelectedDate(new Date(mealToEdit.timestamp));
-      setSelectedTime(format(new Date(mealToEdit.timestamp), "HH:mm"));
       
-      // Determine initial estimation type based on stored data
-      if (mealToEdit.estimatedCalories != null && mealToEdit.protein != null) { // Assuming protein indicates macros were estimated
-        setSelectedEstimationType('calories_macros');
+      const mealTimestamp = new Date(mealToEdit.timestamp);
+      setSelectedDate(mealTimestamp);
+      setSelectedTime(format(mealTimestamp, "HH:mm"));
+      
+      let initialEstType: EstimationType = 'calories_macros';
+      if (mealToEdit.estimatedCalories != null && (mealToEdit.protein != null || mealToEdit.carbs != null || mealToEdit.fat != null)) {
+        initialEstType = 'calories_macros';
       } else if (mealToEdit.estimatedCalories != null) {
-        setSelectedEstimationType('calories_only');
-      } else if (mealToEdit.protein != null) {
-        setSelectedEstimationType('macros_only');
-      } else {
-        setSelectedEstimationType('calories_macros'); // Fallback
+        initialEstType = 'calories_only';
+      } else if (mealToEdit.protein != null || mealToEdit.carbs != null || mealToEdit.fat != null) {
+        initialEstType = 'macros_only';
       }
+      setSelectedEstimationType(initialEstType);
 
-      setEstimation({
+      // Populate manual fields from loaded meal data
+      setManualCalories(mealToEdit.estimatedCalories?.toString() ?? '');
+      setManualProtein(mealToEdit.protein?.toString() ?? '');
+      setManualCarbs(mealToEdit.carbs?.toString() ?? '');
+      setManualFat(mealToEdit.fat?.toString() ?? '');
+
+      // Set AI estimation display based on loaded meal data
+      setAiEstimation({
         isMealDetected: true, 
         estimatedCalories: mealToEdit.estimatedCalories,
-        macroBreakdown: mealToEdit.protein != null && mealToEdit.carbs != null && mealToEdit.fat != null ? {
-          protein: mealToEdit.protein,
-          carbs: mealToEdit.carbs,
-          fat: mealToEdit.fat,
+        macroBreakdown: (mealToEdit.protein != null || mealToEdit.carbs != null || mealToEdit.fat != null) ? {
+          protein: mealToEdit.protein ?? 0, // Default to 0 if null, for schema
+          carbs: mealToEdit.carbs ?? 0,
+          fat: mealToEdit.fat ?? 0,
         } : null,
       });
       setDescriptionUsedInLastEstimate(null); 
@@ -111,10 +127,45 @@ export default function EditMealPage() {
     }
   }, [mealLogLoading, mealId, getMealById, router, toast]);
 
+
+  // Effect to populate manual fields from AI estimation or clear them based on estimation type
+  useEffect(() => {
+    if (pageState !== 'loaded' || isEstimating) return; // Only run if page is loaded and not during an active AI estimation
+
+    if (aiEstimation && aiEstimation.isMealDetected) {
+      if (selectedEstimationType === 'calories_macros' || selectedEstimationType === 'calories_only') {
+        setManualCalories(aiEstimation.estimatedCalories?.toFixed(0) ?? '');
+      } else {
+        setManualCalories('');
+      }
+      if (selectedEstimationType === 'calories_macros' || selectedEstimationType === 'macros_only') {
+        setManualProtein(aiEstimation.macroBreakdown?.protein?.toFixed(1) ?? '');
+        setManualCarbs(aiEstimation.macroBreakdown?.carbs?.toFixed(1) ?? '');
+        setManualFat(aiEstimation.macroBreakdown?.fat?.toFixed(1) ?? '');
+      } else {
+        setManualProtein('');
+        setManualCarbs('');
+        setManualFat('');
+      }
+    } else if (aiEstimation && !aiEstimation.isMealDetected) { // Clear fields if no meal detected
+        setManualCalories('');
+        setManualProtein('');
+        setManualCarbs('');
+        setManualFat('');
+    }
+    // If aiEstimation is null (e.g. photo removed), fields are cleared by handlePhotoCaptured or initial state
+  }, [aiEstimation, selectedEstimationType, pageState, isEstimating]);
+
+
   const handlePhotoCaptured = useCallback((dataUri: string) => {
     setPhotoDataUri(dataUri);
-    setEstimation(null); 
+    setAiEstimation(null); 
     setDescriptionUsedInLastEstimate(null); 
+    // Clear manual fields when photo changes, as estimation will be new
+    setManualCalories('');
+    setManualProtein('');
+    setManualCarbs('');
+    setManualFat('');
   }, []);
 
   const handleEstimate = async () => {
@@ -130,7 +181,7 @@ export default function EditMealPage() {
         mealDescription,
         estimationType: selectedEstimationType
       });
-      setEstimation(result);
+      setAiEstimation(result); // This will trigger the useEffect to update manual fields
 
       if (!result.isMealDetected) {
         toast({ variant: 'destructive', title: 'Meal Not Detected', icon: <AlertTriangle className="h-5 w-5" />, description: 'The AI could not detect a meal in the photo. Please try a different image or add a description.' });
@@ -146,11 +197,12 @@ export default function EditMealPage() {
     } catch (error: any) {
       console.error('Error re-estimating nutrition:', error);
       toast({ variant: 'destructive', title: 'Re-estimation Failed', description: error.message || 'Could not re-estimate nutrition. Please try again.' });
-      setEstimation(initialMealData ? { // Fallback to initial if re-estimation fails and data exists
+       // Fallback to initial if re-estimation fails and data exists
+      setAiEstimation(initialMealData ? {
         isMealDetected: true,
         estimatedCalories: initialMealData.estimatedCalories,
-        macroBreakdown: initialMealData.protein != null ? { protein: initialMealData.protein, carbs: initialMealData.carbs!, fat: initialMealData.fat! } : null,
-      } : null); 
+        macroBreakdown: (initialMealData.protein != null || initialMealData.carbs != null || initialMealData.fat != null) ? { protein: initialMealData.protein ?? 0, carbs: initialMealData.carbs ?? 0, fat: initialMealData.fat ?? 0 } : null,
+      } : null);
       setDescriptionUsedInLastEstimate(null); 
     } finally {
       setIsEstimating(false);
@@ -167,35 +219,36 @@ export default function EditMealPage() {
     return combinedDate.getTime();
   };
 
-  const isEstimationValidForUpdate = () => {
-    if (!estimation || !estimation.isMealDetected) return false;
+  const isValidNumberString = (val: string) => val.trim() !== '' && !isNaN(parseFloat(val)) && parseFloat(val) >= 0;
+
+  const canUpdateMeal = () => {
+    if (!initialMealData || !photoDataUri || !selectedMealType || !selectedDate || !selectedTime) return false;
+
     if (selectedEstimationType === 'calories_macros') {
-      return estimation.estimatedCalories != null && estimation.macroBreakdown != null;
+      return isValidNumberString(manualCalories) && isValidNumberString(manualProtein) && isValidNumberString(manualCarbs) && isValidNumberString(manualFat);
     }
     if (selectedEstimationType === 'calories_only') {
-      return estimation.estimatedCalories != null;
+      return isValidNumberString(manualCalories);
     }
     if (selectedEstimationType === 'macros_only') {
-      return estimation.macroBreakdown != null;
+      return isValidNumberString(manualProtein) && isValidNumberString(manualCarbs) && isValidNumberString(manualFat);
     }
     return false;
   };
 
-  const canUpdateMeal = initialMealData && photoDataUri && selectedMealType && selectedDate && selectedTime && isEstimationValidForUpdate();
-
   const handleUpdateMeal = () => {
-    if (!initialMealData || !canUpdateMeal || !estimation) { 
-        toast({ variant: 'destructive', title: 'Cannot Update Meal', description: 'Please ensure all required fields are filled and a valid estimation is present for the selected type.' });
+    if (!initialMealData || !canUpdateMeal()) { 
+        toast({ variant: 'destructive', title: 'Cannot Update Meal', description: 'Please ensure all required fields are filled and all required nutritional fields for the selected estimation type are valid numbers.' });
         return;
     }
 
     updateMeal(initialMealData.id, {
       timestamp: getTimestamp(),
       photoDataUri: photoDataUri as string,
-      estimatedCalories: estimation.estimatedCalories ?? null,
-      protein: estimation.macroBreakdown?.protein ?? null,
-      carbs: estimation.macroBreakdown?.carbs ?? null,
-      fat: estimation.macroBreakdown?.fat ?? null,
+      estimatedCalories: isValidNumberString(manualCalories) ? parseFloat(manualCalories) : null,
+      protein: isValidNumberString(manualProtein) ? parseFloat(manualProtein) : null,
+      carbs: isValidNumberString(manualCarbs) ? parseFloat(manualCarbs) : null,
+      fat: isValidNumberString(manualFat) ? parseFloat(manualFat) : null,
       mealType: selectedMealType as Meal['mealType'],
       notes: notes,
     });
@@ -248,173 +301,247 @@ export default function EditMealPage() {
           />
 
           {photoDataUri && (
-            <div className="space-y-6 rounded-lg border bg-card p-6 shadow-md">
-              <div>
-                <Label htmlFor="mealDescription" className="text-md font-medium">
-                  Meal Description (Optional, for AI re-estimation)
-                </Label>
-                <Textarea
-                  id="mealDescription"
-                  placeholder="e.g., 'Grilled chicken breast (approx 150g), half cup brown rice, steamed broccoli'. Add or change details if you want to re-estimate."
-                  value={mealDescription}
-                  onChange={(e) => setMealDescription(e.target.value)}
-                  className="mt-2 min-h-[80px]"
-                />
-                 <Alert variant="default" className="mt-3">
-                  <Info className="h-4 w-4" />
-                  <AlertDescription>
-                    If you change the photo or want a new nutrition estimate, provide relevant details here and click "Re-estimate Nutrition".
-                  </AlertDescription>
-                </Alert>
+            <Card className="shadow-md">
+              <CardHeader>
+                <CardTitle>AI Estimation Tools</CardTitle>
+                <CardDescription>Use AI to get a nutritional estimate, then adjust if needed.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div>
+                  <Label htmlFor="mealDescriptionEdit" className="text-md font-medium">
+                    Meal Description (Optional, for AI re-estimation)
+                  </Label>
+                  <Textarea
+                    id="mealDescriptionEdit"
+                    placeholder="e.g., 'Grilled chicken breast (approx 150g), half cup brown rice, steamed broccoli'. Add or change details if you want to re-estimate."
+                    value={mealDescription}
+                    onChange={(e) => setMealDescription(e.target.value)}
+                    className="mt-2 min-h-[80px]"
+                  />
+                  <Alert variant="default" className="mt-3">
+                    <Info className="h-4 w-4" />
+                    <AlertDescription>
+                      If you change the photo or want a new nutrition estimate, provide relevant details here and click "Re-estimate Nutrition".
+                    </AlertDescription>
+                  </Alert>
+                </div>
+                
+                <div>
+                  <Label htmlFor="estimationTypeEdit" className="text-md font-medium">Estimation Type</Label>
+                  <Select
+                    value={selectedEstimationType}
+                    onValueChange={(value) => {
+                      setSelectedEstimationType(value as EstimationType);
+                      // aiEstimation will be used by useEffect to update manual fields
+                    }}
+                  >
+                    <SelectTrigger id="estimationTypeEdit" className="mt-2">
+                      <SelectValue placeholder="Select estimation type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {estimationTypes.map((type) => (
+                        <SelectItem key={type.value} value={type.value}>
+                          {type.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="text-center">
+                  <Button onClick={handleEstimate} disabled={isEstimating || !photoDataUri} size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground">
+                    {isEstimating ? (
+                      <>
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                        Estimating...
+                      </>
+                    ) : (
+                      <>
+                        <Wand2 className="mr-2 h-5 w-5" />
+                        Re-estimate Nutrition
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          <MealEstimation 
+            estimation={aiEstimation} 
+            isLoading={isEstimating}
+            descriptionUsedForEstimation={descriptionUsedInLastEstimate}
+            estimationType={selectedEstimationType}
+          />
+          
+          <Card className="shadow-md">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                    <Edit3 className="h-6 w-6 text-primary" />
+                    Update Logged Meal Details
+                </CardTitle>
+                <CardDescription>Verify or update the nutritional information and other details for your meal log.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                  <Label htmlFor="dateEdit">Date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "w-full justify-start text-left font-normal mt-2",
+                          !selectedDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onSelect={setSelectedDate}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <div>
+                  <Label htmlFor="timeEdit">Time</Label>
+                  <Input
+                    id="timeEdit"
+                    type="time"
+                    value={selectedTime}
+                    onChange={(e) => setSelectedTime(e.target.value)}
+                    className="mt-2"
+                  />
+                </div>
               </div>
-              
               <div>
-                <Label htmlFor="estimationTypeEdit" className="text-md font-medium">Estimation Type</Label>
+                <Label htmlFor="mealTypeEdit">Meal Type</Label>
                 <Select
-                  value={selectedEstimationType}
-                  onValueChange={(value) => {
-                    setSelectedEstimationType(value as EstimationType);
-                    setEstimation(null); // Reset estimation when type changes
-                    setDescriptionUsedInLastEstimate(null);
-                  }}
+                  onValueChange={(value) => setSelectedMealType(value as Meal['mealType'])}
+                  value={selectedMealType}
                 >
-                  <SelectTrigger id="estimationTypeEdit" className="mt-2">
-                    <SelectValue placeholder="Select estimation type" />
+                  <SelectTrigger id="mealTypeEdit" className="mt-2">
+                    <SelectValue placeholder="Select meal type" />
                   </SelectTrigger>
                   <SelectContent>
-                    {estimationTypes.map((type) => (
-                      <SelectItem key={type.value} value={type.value}>
-                        {type.label}
+                    {mealTypes.map((type) => (
+                      <SelectItem key={type} value={type}>
+                        {type}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
-              <div className="text-center">
-                <Button onClick={handleEstimate} disabled={isEstimating || !photoDataUri} size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground">
-                  {isEstimating ? (
-                    <>
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      Estimating...
-                    </>
-                  ) : (
-                    <>
-                      <Wand2 className="mr-2 h-5 w-5" />
-                      Re-estimate Nutrition
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
-          )}
-
-          <MealEstimation 
-            estimation={estimation} 
-            isLoading={isEstimating}
-            descriptionUsedForEstimation={descriptionUsedInLastEstimate}
-            estimationType={selectedEstimationType}
-          />
-          
-          <div className="space-y-6 rounded-lg border bg-card p-6 shadow-md">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div>
-                <Label htmlFor="dateEdit" className="text-md font-medium">Date</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "w-full justify-start text-left font-normal mt-2",
-                        !selectedDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={selectedDate}
-                      onSelect={setSelectedDate}
-                      initialFocus
+              {/* Manual Input Fields */}
+              {(selectedEstimationType === 'calories_macros' || selectedEstimationType === 'calories_only') && (
+                <div>
+                  <Label htmlFor="manualCaloriesEdit">Logged Calories (kcal)</Label>
+                  <Input
+                    id="manualCaloriesEdit"
+                    type="number"
+                    placeholder="e.g., 500"
+                    value={manualCalories}
+                    onChange={(e) => setManualCalories(e.target.value)}
+                    className="mt-2"
+                    min="0"
+                  />
+                </div>
+              )}
+              {(selectedEstimationType === 'calories_macros' || selectedEstimationType === 'macros_only') && (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                  <div>
+                    <Label htmlFor="manualProteinEdit">Logged Protein (g)</Label>
+                    <Input
+                      id="manualProteinEdit"
+                      type="number"
+                      placeholder="e.g., 30"
+                      value={manualProtein}
+                      onChange={(e) => setManualProtein(e.target.value)}
+                      className="mt-2"
+                      min="0"
+                      step="0.1"
                     />
-                  </PopoverContent>
-                </Popover>
-              </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="manualCarbsEdit">Logged Carbs (g)</Label>
+                    <Input
+                      id="manualCarbsEdit"
+                      type="number"
+                      placeholder="e.g., 50"
+                      value={manualCarbs}
+                      onChange={(e) => setManualCarbs(e.target.value)}
+                      className="mt-2"
+                      min="0"
+                      step="0.1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="manualFatEdit">Logged Fat (g)</Label>
+                    <Input
+                      id="manualFatEdit"
+                      type="number"
+                      placeholder="e.g., 20"
+                      value={manualFat}
+                      onChange={(e) => setManualFat(e.target.value)}
+                      className="mt-2"
+                      min="0"
+                      step="0.1"
+                    />
+                  </div>
+                </div>
+              )}
+
               <div>
-                <Label htmlFor="timeEdit" className="text-md font-medium">Time</Label>
-                <Input
-                  id="timeEdit"
-                  type="time"
-                  value={selectedTime}
-                  onChange={(e) => setSelectedTime(e.target.value)}
-                  className="mt-2"
+                <Label htmlFor="notesEdit">Notes for Log</Label>
+                <Textarea
+                  id="notesEdit"
+                  placeholder="e.g., homemade, restaurant dish, feelings after meal..."
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  className="mt-2 min-h-[100px]"
                 />
               </div>
-            </div>
-            <div>
-              <Label htmlFor="mealTypeEdit" className="text-md font-medium">Meal Type</Label>
-              <Select
-                onValueChange={(value) => setSelectedMealType(value as Meal['mealType'])}
-                value={selectedMealType}
-              >
-                <SelectTrigger id="mealTypeEdit" className="mt-2">
-                  <SelectValue placeholder="Select meal type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {mealTypes.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {type}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="notes" className="text-md font-medium">Notes for Log</Label>
-              <Textarea
-                id="notes"
-                placeholder="e.g., homemade, restaurant dish, feelings after meal..."
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                className="mt-2 min-h-[100px]"
-              />
-            </div>
-            <div className="flex flex-col gap-4 sm:flex-row">
-              <Button onClick={handleUpdateMeal} disabled={!canUpdateMeal || isEstimating} size="lg" className="flex-1">
-                <Save className="mr-2 h-5 w-5" />
-                Update Meal
-              </Button>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive" size="lg" className="flex-1">
-                    <Trash2 className="mr-2 h-5 w-5" />
-                    Delete Meal
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This action cannot be undone. This will permanently delete this meal
-                      from your log.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDeleteMeal}>
-                      Delete
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
-          </div>
+              <div className="flex flex-col gap-4 sm:flex-row">
+                <Button onClick={handleUpdateMeal} disabled={!canUpdateMeal() || isEstimating} size="lg" className="flex-1">
+                  <Save className="mr-2 h-5 w-5" />
+                  Update Meal
+                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" size="lg" className="flex-1">
+                      <Trash2 className="mr-2 h-5 w-5" />
+                      Delete Meal
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete this meal
+                        from your log.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleDeleteMeal}>
+                        Delete
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </AppLayout>
   );
 }
+
