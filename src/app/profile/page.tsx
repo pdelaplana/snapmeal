@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
-import { Settings, BarChart3, ChevronRight, Palette, Camera, Edit2, Send } from "lucide-react";
+import { Settings, BarChart3, ChevronRight, Palette, Camera, Edit2, Send, Trash2, Users } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { format, startOfDay } from "date-fns";
@@ -18,6 +18,7 @@ import MealCapture from "@/components/meal/meal-capture";
 import { useToast } from "@/hooks/use-toast";
 
 const PROFILE_PHOTO_STORAGE_KEY = 'snapmeal_profile_photo_uri';
+const PROFILE_SHARED_EMAILS_KEY = 'snapmeal_shared_emails';
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -26,11 +27,21 @@ export default function ProfilePage() {
   const [profilePhotoUri, setProfilePhotoUri] = useState<string | null>(null);
   const [isEditingPhoto, setIsEditingPhoto] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
+  const [sharedEmails, setSharedEmails] = useState<string[]>([]);
 
   useEffect(() => {
     const storedPhotoUri = localStorage.getItem(PROFILE_PHOTO_STORAGE_KEY);
     if (storedPhotoUri) {
       setProfilePhotoUri(storedPhotoUri);
+    }
+    const storedSharedEmails = localStorage.getItem(PROFILE_SHARED_EMAILS_KEY);
+    if (storedSharedEmails) {
+      try {
+        setSharedEmails(JSON.parse(storedSharedEmails));
+      } catch (e) {
+        console.error("Failed to parse shared emails from localStorage", e);
+        setSharedEmails([]);
+      }
     }
   }, []);
 
@@ -73,12 +84,36 @@ export default function ProfilePage() {
       });
       return;
     }
+    if (sharedEmails.includes(inviteEmail)) {
+      toast({
+        variant: "default",
+        title: "Already Shared",
+        description: `You are already sharing your meal log with ${inviteEmail}.`,
+      });
+      setInviteEmail('');
+      return;
+    }
+
+    const updatedSharedEmails = [...sharedEmails, inviteEmail];
+    setSharedEmails(updatedSharedEmails);
+    localStorage.setItem(PROFILE_SHARED_EMAILS_KEY, JSON.stringify(updatedSharedEmails));
     toast({
       title: "Invitation Sent (Mocked)",
-      description: `An invitation to register for SnapMeal and view your log has been notionally sent to ${inviteEmail}.`,
+      description: `An invitation to register for SnapMeal and view your log has been notionally sent to ${inviteEmail}. They have been added to your shared list.`,
     });
     setInviteEmail('');
   };
+
+  const handleUnshareEmail = (emailToUnshare: string) => {
+    const updatedSharedEmails = sharedEmails.filter(email => email !== emailToUnshare);
+    setSharedEmails(updatedSharedEmails);
+    localStorage.setItem(PROFILE_SHARED_EMAILS_KEY, JSON.stringify(updatedSharedEmails));
+    toast({
+      title: "Sharing Stopped (Mocked)",
+      description: `You have stopped sharing your meal log with ${emailToUnshare}.`,
+    });
+  };
+
 
   if (!user) {
     return <AppLayout><p>Loading user data...</p></AppLayout>;
@@ -175,7 +210,7 @@ export default function ProfilePage() {
           <Card className="shadow-md">
             <CardHeader>
               <CardTitle className="flex items-center text-xl">
-                <Send className="mr-3 h-6 w-6 text-primary" />
+                <Users className="mr-3 h-6 w-6 text-primary" />
                 Share Your Meal Log
               </CardTitle>
               <CardDescription>
@@ -183,7 +218,7 @@ export default function ProfilePage() {
                 They will receive a (mocked) email to register for SnapMeal.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-6">
               <div>
                 <Label htmlFor="inviteEmail">Recipient&apos;s Email</Label>
                 <Input
@@ -203,6 +238,26 @@ export default function ProfilePage() {
                 <Send className="mr-2 h-4 w-4" />
                 Send Invitation
               </Button>
+
+              <Separator />
+              <div>
+                <h4 className="mb-2 text-md font-medium text-foreground">Currently Sharing With:</h4>
+                {sharedEmails.length > 0 ? (
+                  <ul className="space-y-2">
+                    {sharedEmails.map((email) => (
+                      <li key={email} className="flex items-center justify-between rounded-md bg-muted/30 p-3">
+                        <span className="text-sm text-foreground">{email}</span>
+                        <Button variant="ghost" size="sm" onClick={() => handleUnshareEmail(email)} title={`Stop sharing with ${email}`}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                          <span className="sr-only">Unshare</span>
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-muted-foreground">You haven&apos;t shared your meal log with anyone yet.</p>
+                )}
+              </div>
             </CardContent>
           </Card>
           
@@ -228,3 +283,5 @@ export default function ProfilePage() {
     </AppLayout>
   );
 }
+
+    
