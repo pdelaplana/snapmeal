@@ -6,21 +6,26 @@ import { useAuth } from "@/context/auth-context";
 import { useMealLog } from "@/context/meal-log-context";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import Link from "next/link";
-import { Settings, BarChart3, ChevronRight, Palette, Camera, Edit2 } from "lucide-react";
+import { Settings, BarChart3, ChevronRight, Palette, Camera, Edit2, Send } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { format, startOfDay } from "date-fns";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import MealCapture from "@/components/meal/meal-capture";
+import { useToast } from "@/hooks/use-toast";
 
 const PROFILE_PHOTO_STORAGE_KEY = 'snapmeal_profile_photo_uri';
 
 export default function ProfilePage() {
   const { user } = useAuth();
   const { meals } = useMealLog();
+  const { toast } = useToast();
   const [profilePhotoUri, setProfilePhotoUri] = useState<string | null>(null);
   const [isEditingPhoto, setIsEditingPhoto] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
 
   useEffect(() => {
     const storedPhotoUri = localStorage.getItem(PROFILE_PHOTO_STORAGE_KEY);
@@ -34,7 +39,6 @@ export default function ProfilePage() {
       setProfilePhotoUri(dataUri);
       localStorage.setItem(PROFILE_PHOTO_STORAGE_KEY, dataUri);
     } else {
-      // If dataUri is empty (photo removed in MealCapture), clear it
       setProfilePhotoUri(null);
       localStorage.removeItem(PROFILE_PHOTO_STORAGE_KEY);
     }
@@ -54,6 +58,27 @@ export default function ProfilePage() {
 
     return uniqueDaysWithMeals > 0 ? calorieSum / uniqueDaysWithMeals : 0;
   }, [meals]);
+
+  const isValidEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const handleSendInvitation = () => {
+    if (!isValidEmail(inviteEmail)) {
+      toast({
+        variant: "destructive",
+        title: "Invalid Email",
+        description: "Please enter a valid email address to send an invitation.",
+      });
+      return;
+    }
+    toast({
+      title: "Invitation Sent (Mocked)",
+      description: `An invitation to register for SnapMeal and view your log has been notionally sent to ${inviteEmail}.`,
+    });
+    setInviteEmail('');
+  };
 
   if (!user) {
     return <AppLayout><p>Loading user data...</p></AppLayout>;
@@ -144,6 +169,40 @@ export default function ProfilePage() {
                   <span className="text-xs">Not available</span>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-md">
+            <CardHeader>
+              <CardTitle className="flex items-center text-xl">
+                <Send className="mr-3 h-6 w-6 text-primary" />
+                Share Your Meal Log
+              </CardTitle>
+              <CardDescription>
+                Invite someone (e.g., your nutritionist) to view your meal log. 
+                They will receive a (mocked) email to register for SnapMeal.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="inviteEmail">Recipient&apos;s Email</Label>
+                <Input
+                  id="inviteEmail"
+                  type="email"
+                  placeholder="nutritionist@example.com"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+              <Button 
+                onClick={handleSendInvitation} 
+                className="w-full"
+                disabled={!isValidEmail(inviteEmail) || !inviteEmail.trim()}
+              >
+                <Send className="mr-2 h-4 w-4" />
+                Send Invitation
+              </Button>
             </CardContent>
           </Card>
           
