@@ -46,7 +46,7 @@ export function MealLogProvider({ children }: { children: ReactNode }) {
   const addMeal = useCallback((newMealData: Omit<Meal, 'id' | 'timestamp'>) => {
     const newMeal: Meal = {
       ...newMealData,
-      id: new Date().toISOString() + Math.random().toString(36).substring(2, 9), 
+      id: crypto.randomUUID(),
       timestamp: Date.now(),
     };
     setMeals(prevMeals => [newMeal, ...prevMeals].sort((a, b) => b.timestamp - a.timestamp));

@@ -90,20 +90,26 @@ const estimateCaloriesMacrosFlow = ai.defineFlow(
     inputSchema: EstimateCaloriesMacrosInputSchema,
     outputSchema: EstimateCaloriesMacrosOutputSchema,
   },
-  async input => {
-    const response = await estimateCaloriesMacrosPrompt(input);
-    
-    if (response.error) {
-      console.error('Error from AI model:', response.error);
-      throw new Error(`AI model failed to generate a response: ${response.error.message || 'Reason unknown'}`);
-    }
+  async (input: EstimateCaloriesMacrosInput): Promise<EstimateCaloriesMacrosOutput> => {
+    try {
+      const response = await estimateCaloriesMacrosPrompt(input);
+      
+      if (response.error) {
+        console.error('Error from AI model with input:', JSON.stringify(input), 'Error:', response.error);
+        throw new Error(`AI model failed to generate a response: ${String(response.error.message || response.error || 'Reason unknown')}`);
+      }
 
-    if (!response.output) {
-      console.error('AI model returned no output and no error. Raw response candidates:', response.candidates);
-      throw new Error('AI model returned no valid output. This might be due to content filtering or an issue with the prompt response format.');
+      if (!response.output) {
+        console.error('AI model returned no output and no error. Input:', JSON.stringify(input), 'Raw response candidates:', response.candidates);
+        throw new Error('AI model returned no valid output. This might be due to content filtering or an issue with the prompt response format.');
+      }
+      
+      return response.output;
+    } catch (flowError: any) {
+        console.error('Critical error in estimateCaloriesMacrosFlow with input:', JSON.stringify(input), 'Error:', flowError);
+        // Re-throw a new Error instance to ensure proper error propagation
+        throw new Error(`Critical error processing meal estimation: ${String(flowError.message || flowError || 'Flow execution failed')}`);
     }
-    
-    return response.output;
   }
 );
     
