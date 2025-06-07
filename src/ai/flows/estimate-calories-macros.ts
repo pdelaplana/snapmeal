@@ -3,7 +3,7 @@
 
 /**
  * @fileOverview AI agent that estimates the calorie count and macro breakdown of a meal from a photo and an optional description.
- * It also determines if a meal is detected in the photo and allows specifying the type of estimation.
+ * It also determines if a meal is detected in the photo, allows specifying the type of estimation, and lists recognized food items.
  *
  * - estimateCaloriesMacros - A function that handles the estimation process.
  * - EstimateCaloriesMacrosInput - The input type for the estimateCaloriesMacros function.
@@ -38,6 +38,7 @@ const EstimateCaloriesMacrosOutputSchema = z.object({
     carbs: z.number().describe('The estimated carbohydrate content of the meal in grams.'),
     fat: z.number().describe('The estimated fat content of the meal in grams.'),
   }).optional().nullable().describe('The estimated macro breakdown of the meal. Provided if requested and a meal is detected, otherwise null.'),
+  recognizedItems: z.array(z.string()).optional().nullable().describe('A list of distinct food items or ingredients recognized in the meal, or null if none identified or no meal detected.')
 });
 export type EstimateCaloriesMacrosOutput = z.infer<typeof EstimateCaloriesMacrosOutputSchema>;
 
@@ -59,10 +60,11 @@ If a meal IS detected:
   - If 'estimationType' is 'calories_only', 'macroBreakdown' MUST be null.
   - If 'estimationType' is 'macros_only', 'estimatedCalories' MUST be null.
   - If 'estimationType' is 'calories_macros', both 'estimatedCalories' and 'macroBreakdown' should be populated.
+  Also, identify up to 5-7 distinct, primary food items or ingredients visible in the photo and/or mentioned in the description. List them in the 'recognizedItems' array. If no specific items can be clearly identified but a meal is present, 'recognizedItems' can be an empty array or null.
 
 If NO meal is detected in the photo:
   Set 'isMealDetected' to false.
-  'estimatedCalories' and 'macroBreakdown' MUST be set to null.
+  'estimatedCalories', 'macroBreakdown', and 'recognizedItems' MUST be set to null.
 
 Use the following as sources of information about the meal.
 Photo: {{media url=photoDataUri}}
@@ -74,10 +76,10 @@ Prioritize the user's description if it provides specific details about ingredie
 
 Respond ONLY with a valid JSON object adhering to the specified output schema. Do not add any explanatory text before or after the JSON.
 Examples:
-- Calories & Macros ('calories_macros'): { "isMealDetected": true, "estimatedCalories": 500, "macroBreakdown": { "protein": 30, "carbs": 50, "fat": 20 } }
-- Calories Only ('calories_only'):   { "isMealDetected": true, "estimatedCalories": 500, "macroBreakdown": null }
-- Macros Only ('macros_only'):     { "isMealDetected": true, "estimatedCalories": null, "macroBreakdown": { "protein": 30, "carbs": 50, "fat": 20 } }
-- No Meal Detected: { "isMealDetected": false, "estimatedCalories": null, "macroBreakdown": null }`,
+- Calories & Macros ('calories_macros'): { "isMealDetected": true, "estimatedCalories": 500, "macroBreakdown": { "protein": 30, "carbs": 50, "fat": 20 }, "recognizedItems": ["chicken breast", "brown rice", "broccoli"] }
+- Calories Only ('calories_only'):   { "isMealDetected": true, "estimatedCalories": 500, "macroBreakdown": null, "recognizedItems": ["salad greens", "tomato", "cucumber"] }
+- Macros Only ('macros_only'):     { "isMealDetected": true, "estimatedCalories": null, "macroBreakdown": { "protein": 30, "carbs": 50, "fat": 20 }, "recognizedItems": ["steak", "sweet potato"] }
+- No Meal Detected: { "isMealDetected": false, "estimatedCalories": null, "macroBreakdown": null, "recognizedItems": null }`,
 });
 
 const estimateCaloriesMacrosFlow = ai.defineFlow(
@@ -88,7 +90,6 @@ const estimateCaloriesMacrosFlow = ai.defineFlow(
   },
   async (input: EstimateCaloriesMacrosInput): Promise<EstimateCaloriesMacrosOutput> => {
     try {
-      // Ensure default value if not provided, though Zod default should handle this
       const flowInput = {
         ...input,
         estimationType: input.estimationType || 'calories_macros',
@@ -106,7 +107,6 @@ const estimateCaloriesMacrosFlow = ai.defineFlow(
         throw new Error('AI model returned no valid output. This might be due to content filtering or an issue with the prompt response format.');
       }
       
-      // Validate output based on input estimationType
       const { output } = response;
       if (flowInput.estimationType === 'calories_only' && output.macroBreakdown !== null) {
         console.warn('AI returned macros when only calories were requested. Correcting. Output:', output);
@@ -118,14 +118,22 @@ const estimateCaloriesMacrosFlow = ai.defineFlow(
       }
       if (flowInput.estimationType === 'calories_macros' && (output.estimatedCalories === null || output.macroBreakdown === null) && output.isMealDetected) {
          console.warn('AI failed to return both calories and macros when requested and meal detected. Output:', output);
-         // Potentially throw error or allow partial data? For now, allow partial as AI might struggle.
       }
-
+      if (!output.isMealDetected && output.recognizedItems !== null) {
+        console.warn('AI returned recognized items when no meal was detected. Correcting. Output:', output);
+        output.recognizedItems = null;
+      }
 
       return output;
     } catch (flowError: any) {
         console.error('Critical error in estimateCaloriesMacrosFlow with input:', JSON.stringify(input), 'Error:', flowError);
-        throw new Error(`Critical error processing meal estimation: ${String(flowError.message || flowError || 'Flow execution failed')}`);
+        // Ensure a valid structure is returned even in critical failure, adhering to schema for nullable fields
+        return {
+          isMealDetected: false,
+          estimatedCalories: null,
+          macroBreakdown: null,
+          recognizedItems: null,
+        };
     }
   }
 );

@@ -1,16 +1,17 @@
 
 import type { EstimateCaloriesMacrosOutput } from '@/ai/flows/estimate-calories-macros';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Flame, Beef, Wheat, Drumstick, Info, HelpCircle } from 'lucide-react'; // Added HelpCircle
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Flame, Beef, Wheat, Drumstick, Info, HelpCircle, ListTree } from 'lucide-react'; 
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import type { EstimationType } from '@/types';
+import { Badge } from '@/components/ui/badge';
 
 interface MealEstimationProps {
   estimation: EstimateCaloriesMacrosOutput | null;
   isLoading: boolean;
   descriptionUsedForEstimation?: boolean | null;
-  estimationType?: EstimationType; // To know what was requested
+  estimationType?: EstimationType; 
 }
 
 export default function MealEstimation({ estimation, isLoading, descriptionUsedForEstimation, estimationType }: MealEstimationProps) {
@@ -36,14 +37,14 @@ export default function MealEstimation({ estimation, isLoading, descriptionUsedF
   
   const showCalories = estimation.estimatedCalories != null && (estimationType === 'calories_macros' || estimationType === 'calories_only');
   const showMacros = estimation.macroBreakdown != null && (estimationType === 'calories_macros' || estimationType === 'macros_only');
+  const showRecognizedItems = estimation.isMealDetected && estimation.recognizedItems && estimation.recognizedItems.length > 0;
+
 
   if (!estimation.isMealDetected) {
-     // No need to render if meal not detected, parent page shows specific alert
     return null;
   }
   
-  // If meal detected but no relevant data for the chosen estimation type
-  if (estimation.isMealDetected && !showCalories && !showMacros && estimationType) {
+  if (estimation.isMealDetected && !showCalories && !showMacros && !showRecognizedItems && estimationType) {
      return (
         <Card className="shadow-lg">
             <CardHeader>
@@ -53,7 +54,7 @@ export default function MealEstimation({ estimation, isLoading, descriptionUsedF
                  <Alert variant="destructive">
                     <HelpCircle className="h-4 w-4" />
                     <AlertDescription>
-                        A meal was detected, but the AI could not provide the requested {estimationType.replace('_', ' ')} estimates. You might want to try a clearer photo, add a description, or re-estimate.
+                        A meal was detected, but the AI could not provide the requested {estimationType.replace('_', ' ')} estimates or recognized items. You might want to try a clearer photo, add a description, or re-estimate.
                     </AlertDescription>
                 </Alert>
             </CardContent>
@@ -62,7 +63,7 @@ export default function MealEstimation({ estimation, isLoading, descriptionUsedF
   }
 
 
-  const { estimatedCalories, macroBreakdown } = estimation;
+  const { estimatedCalories, macroBreakdown, recognizedItems } = estimation;
   
   let proteinPercentage = 0, carbsPercentage = 0, fatPercentage = 0;
   if (macroBreakdown) {
@@ -76,7 +77,7 @@ export default function MealEstimation({ estimation, isLoading, descriptionUsedF
   return (
     <Card className="shadow-lg">
       <CardHeader>
-        <CardTitle className="text-xl font-semibold">Estimated Nutrition</CardTitle>
+        <CardTitle className="text-xl font-semibold">AI Estimation Results</CardTitle>
         {typeof descriptionUsedForEstimation === 'boolean' && (
           <Alert variant="default" className="mt-3">
             <Info className="h-4 w-4" />
@@ -122,10 +123,26 @@ export default function MealEstimation({ estimation, isLoading, descriptionUsedF
             </div>
           </div>
         )}
+
+        {showRecognizedItems && recognizedItems && recognizedItems.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center">
+                 <ListTree className="mr-2 h-5 w-5 text-primary" />
+                 <h3 className="text-md font-medium text-foreground">Recognized Items:</h3>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {recognizedItems.map((item, index) => (
+                <Badge key={index} variant="secondary" className="text-sm">
+                  {item}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )}
         
         {(showCalories || showMacros) && (
             <p className="text-xs text-muted-foreground">
-            *These are estimates. Actual values may vary.
+            *These are AI estimates. Actual values may vary. You can manually adjust them below.
             </p>
         )}
       </CardContent>
