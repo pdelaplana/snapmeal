@@ -9,16 +9,56 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
-import { Settings, BarChart3, ChevronRight, Palette, Camera, Edit2, Send, Trash2, Users } from "lucide-react";
+import { Settings, BarChart3, ChevronRight, Palette, Camera, Edit2, Send, Trash2, Users, Eye } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { format, startOfDay } from "date-fns";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import MealCapture from "@/components/meal/meal-capture";
 import { useToast } from "@/hooks/use-toast";
+import type { Meal } from "@/types";
 
 const PROFILE_PHOTO_STORAGE_KEY = 'snapmeal_profile_photo_uri';
 const PROFILE_SHARED_EMAILS_KEY = 'snapmeal_shared_emails';
+const LOGS_SHARED_WITH_ME_KEY = 'snapmeal_logs_shared_with_me_by_emails'; // Key for who shared with current user
+
+// Mock sharer data
+const MOCK_SHARERS = [
+  { id: 'nutritionist@demo.com', name: 'Demo Nutritionist', mealStorageKey: 'snapmeal_log_nutritionist@demo.com' },
+  { id: 'friend@demo.com', name: 'Active Friend', mealStorageKey: 'snapmeal_log_friend@demo.com' },
+];
+
+const generateMockMeals = (sharerId: string): Meal[] => {
+  const today = new Date().getTime();
+  const yesterday = new Date(today - 24 * 60 * 60 * 1000).getTime();
+  return [
+    {
+      id: `${sharerId}-meal1-${crypto.randomUUID()}`,
+      timestamp: today,
+      photoDataUri: 'https://placehold.co/400x225.png',
+      estimatedCalories: 550,
+      protein: 30,
+      carbs: 60,
+      fat: 20,
+      mealType: 'Lunch',
+      notes: `Sample lunch for ${sharerId}.`,
+      recognizedItems: ['Chicken Sandwich', 'Apple Slices'],
+    },
+    {
+      id: `${sharerId}-meal2-${crypto.randomUUID()}`,
+      timestamp: yesterday,
+      photoDataUri: 'https://placehold.co/400x225.png',
+      estimatedCalories: 300,
+      protein: 15,
+      carbs: 40,
+      fat: 10,
+      mealType: 'Breakfast',
+      notes: `Sample breakfast for ${sharerId}.`,
+      recognizedItems: ['Oatmeal', 'Berries'],
+    },
+  ];
+};
+
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -28,6 +68,8 @@ export default function ProfilePage() {
   const [isEditingPhoto, setIsEditingPhoto] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [sharedEmails, setSharedEmails] = useState<string[]>([]);
+  const [logsSharedWithMe, setLogsSharedWithMe] = useState<typeof MOCK_SHARERS>([]);
+
 
   useEffect(() => {
     const storedPhotoUri = localStorage.getItem(PROFILE_PHOTO_STORAGE_KEY);
@@ -43,6 +85,17 @@ export default function ProfilePage() {
         setSharedEmails([]);
       }
     }
+
+    // Simulate fetching list of who shared with current user & pre-populate their data if needed
+    // In a real app, this list would come from a backend.
+    setLogsSharedWithMe(MOCK_SHARERS); 
+    MOCK_SHARERS.forEach(sharer => {
+      if (!localStorage.getItem(sharer.mealStorageKey)) {
+        localStorage.setItem(sharer.mealStorageKey, JSON.stringify(generateMockMeals(sharer.id)));
+        console.log(`Pre-populated mock meals for ${sharer.id} in localStorage.`);
+      }
+    });
+
   }, []);
 
   const handleProfilePhotoCaptured = useCallback((dataUri: string) => {
@@ -260,6 +313,34 @@ export default function ProfilePage() {
               </div>
             </CardContent>
           </Card>
+
+          <Card className="shadow-md">
+            <CardHeader>
+              <CardTitle className="flex items-center text-xl">
+                <Eye className="mr-3 h-6 w-6 text-primary" />
+                Meal Logs Shared With You
+              </CardTitle>
+              <CardDescription>View meal logs that others have shared with you (mocked data).</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {logsSharedWithMe.length > 0 ? (
+                <ul className="space-y-3">
+                  {logsSharedWithMe.map((sharer) => (
+                    <li key={sharer.id}>
+                      <Link href={`/view-shared-log/${sharer.id}`} passHref>
+                        <Button variant="outline" className="w-full justify-between">
+                          <span>View {sharer.name}&apos;s Log ({sharer.id})</span>
+                          <ChevronRight className="h-5 w-5" />
+                        </Button>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-muted-foreground">No meal logs have been shared with you yet.</p>
+              )}
+            </CardContent>
+          </Card>
           
           <Card className="shadow-md">
             <CardHeader>
@@ -283,5 +364,6 @@ export default function ProfilePage() {
     </AppLayout>
   );
 }
+    
 
     
