@@ -7,6 +7,9 @@ import { useMealLog } from '@/context/meal-log-context';
 import { LoadingSpinner } from '@/components/loading-spinner';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { format, isToday, isYesterday, parseISO, compareDesc } from 'date-fns';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { PlusCircle } from 'lucide-react';
 
 export default function MealLogList() {
   const { meals, loading } = useMealLog();
@@ -20,12 +23,16 @@ export default function MealLogList() {
   }
 
   if (meals.length === 0) {
-    // This message is for when there are no meals AT ALL.
-    // The "Today" specific message will be handled below if there are meals, but none for today.
     return (
       <div className="py-12 text-center">
-        <p className="text-lg font-medium text-muted-foreground">No meals logged yet.</p>
-        <p className="text-sm text-muted-foreground">Start by adding a new meal!</p>
+        <p className="text-xl font-semibold text-foreground">No meals logged yet.</p>
+        <p className="mt-2 text-sm text-muted-foreground">Start by adding a new meal!</p>
+         <Link href="/add-meal" className="mt-4 inline-block">
+            <Button variant="default" size="lg">
+              <PlusCircle className="mr-2 h-5 w-5" />
+              Add First Meal
+            </Button>
+          </Link>
       </div>
     );
   }
@@ -83,11 +90,21 @@ export default function MealLogList() {
                     ))}
                   </div>
                 ) : (
-                  // This message is specifically for an empty "Today" group when other meals might exist on other days.
                   dayLabel === 'Today' && (
-                    <p className="pl-1 text-sm text-muted-foreground">
-                      No meals logged for Today.
-                    </p>
+                    <div className="rounded-lg border-2 border-dashed border-muted-foreground/30 bg-card p-8 text-center shadow-sm">
+                      <p className="text-lg font-medium text-foreground">
+                        No meals logged for Today.
+                      </p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Ready to log your first meal of the day?
+                      </p>
+                      <Link href="/add-meal" className="mt-4 inline-block">
+                        <Button variant="outline" size="md">
+                          <PlusCircle className="mr-2 h-4 w-4" />
+                          Add Meal
+                        </Button>
+                      </Link>
+                    </div>
                   )
                 )}
               </div>
