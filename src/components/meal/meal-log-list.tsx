@@ -20,6 +20,8 @@ export default function MealLogList() {
   }
 
   if (meals.length === 0) {
+    // This message is for when there are no meals AT ALL.
+    // The "Today" specific message will be handled below if there are meals, but none for today.
     return (
       <div className="py-12 text-center">
         <p className="text-lg font-medium text-muted-foreground">No meals logged yet.</p>
@@ -30,16 +32,21 @@ export default function MealLogList() {
 
   // Group meals by day
   const groupMealsByDay = (mealsToGroup: Meal[]): Record<string, Meal[]> => {
-    return mealsToGroup.reduce((acc, meal) => {
-      // Use 'yyyy-MM-dd' for a consistent key for grouping and sorting
+    const grouped = mealsToGroup.reduce((acc, meal) => {
       const dateKey = format(new Date(meal.timestamp), 'yyyy-MM-dd');
       if (!acc[dateKey]) {
         acc[dateKey] = [];
       }
-      // Meals are already sorted by timestamp in context, so they'll be in order within each day group.
-      acc[dateKey].push(meal);
+      acc[dateKey].push(meal); // Meals are already sorted by timestamp in context
       return acc;
     }, {} as Record<string, Meal[]>);
+
+    // Ensure "Today" group always exists
+    const todayKey = format(new Date(), 'yyyy-MM-dd');
+    if (!grouped[todayKey]) {
+      grouped[todayKey] = [];
+    }
+    return grouped;
   };
 
   const groupedMeals = groupMealsByDay(meals);
@@ -47,11 +54,11 @@ export default function MealLogList() {
   const dateKeys = Object.keys(groupedMeals).sort((a, b) => compareDesc(parseISO(a), parseISO(b)));
 
   return (
-    <ScrollArea className="h-[calc(100vh-220px)]"> {/* Adjusted height slightly for potential date headers */}
+    <ScrollArea className="h-[calc(100vh-220px)]">
       <div className="space-y-8 p-4">
         {dateKeys.map((dateKey) => {
           const mealsForDay = groupedMeals[dateKey];
-          const dayDate = parseISO(dateKey); // Convert 'yyyy-MM-dd' key back to Date object for display formatting
+          const dayDate = parseISO(dateKey);
 
           let dayLabel: string;
           if (isToday(dayDate)) {
@@ -59,21 +66,34 @@ export default function MealLogList() {
           } else if (isYesterday(dayDate)) {
             dayLabel = 'Yesterday';
           } else {
-            dayLabel = format(dayDate, 'MMMM d, yyyy'); // e.g., "October 26, 2023"
+            dayLabel = format(dayDate, 'MMMM d, yyyy');
           }
 
-          return (
-            <div key={dateKey}>
-              <h2 className="mb-4 pl-1 text-xl font-semibold text-foreground md:text-2xl">
-                {dayLabel}
-              </h2>
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {mealsForDay.map((meal) => (
-                  <MealLogItem key={meal.id} meal={meal} />
-                ))}
+          // Only render day sections if they are "Today" or have meals.
+          if (dayLabel === 'Today' || mealsForDay.length > 0) {
+            return (
+              <div key={dateKey}>
+                <h2 className="mb-4 pl-1 text-xl font-semibold text-foreground md:text-2xl">
+                  {dayLabel}
+                </h2>
+                {mealsForDay.length > 0 ? (
+                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    {mealsForDay.map((meal) => (
+                      <MealLogItem key={meal.id} meal={meal} />
+                    ))}
+                  </div>
+                ) : (
+                  // This message is specifically for an empty "Today" group when other meals might exist on other days.
+                  dayLabel === 'Today' && (
+                    <p className="pl-1 text-sm text-muted-foreground">
+                      No meals logged for Today.
+                    </p>
+                  )
+                )}
               </div>
-            </div>
-          );
+            );
+          }
+          return null; // Don't render empty past day sections
         })}
       </div>
     </ScrollArea>
