@@ -17,44 +17,47 @@ import { Wand2, Save, Loader2, Info, AlertTriangle, ChevronLeft } from 'lucide-r
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { LoadingSpinner } from '@/components/loading-spinner';
 
+type PageState = 'loading' | 'loaded' | 'error';
+
 export default function EditMealPage() {
   const router = useRouter();
   const params = useParams();
   const mealId = params.mealId as string;
 
-  const { getMealById, updateMeal, loading: mealLogLoading } = useMealLog(); // Renamed context loading
+  const { getMealById, updateMeal, loading: mealLogLoading } = useMealLog();
   const { toast } = useToast();
 
   const [initialMealData, setInitialMealData] = useState<Meal | null>(null);
   const [photoDataUri, setPhotoDataUri] = useState<string | null>(null);
-  const [mealDescription, setMealDescription] = useState(''); // For AI estimation
+  const [mealDescription, setMealDescription] = useState('');
   const [estimation, setEstimation] = useState<EstimateCaloriesMacrosOutput | null>(null);
-  const [notes, setNotes] = useState(''); // For user's log
-  const [isEstimating, setIsEstimating] = useState(false); // For AI estimation loading
-  const [isPageLoading, setIsPageLoading] = useState(true); // For initial meal data loading
+  const [notes, setNotes] = useState('');
+  const [isEstimating, setIsEstimating] = useState(false);
+  const [pageState, setPageState] = useState<PageState>('loading');
 
   useEffect(() => {
+    if (mealLogLoading) {
+      setPageState('loading');
+      return;
+    }
+
+    // mealLogLoading is false, context is loaded.
     if (!mealId) {
-      // Should not happen if routing is correct, but as a safeguard
       toast({ variant: 'destructive', title: 'Error', description: 'Meal ID is missing.' });
       router.replace('/dashboard');
+      setPageState('error');
       return;
     }
 
-    if (mealLogLoading) {
-      setIsPageLoading(true); // Keep showing spinner if context is loading
-      return;
-    }
-
-    // mealLogLoading is false here, so we can safely try to get the meal
     const mealToEdit = getMealById(mealId);
+
     if (mealToEdit) {
       setInitialMealData(mealToEdit);
       setPhotoDataUri(mealToEdit.photoDataUri);
-      setMealDescription('');
+      setMealDescription(''); // AI description is for new estimations
       setNotes(mealToEdit.notes || '');
       setEstimation({
-        isMealDetected: true,
+        isMealDetected: true, // Assumed for an existing logged meal
         estimatedCalories: mealToEdit.estimatedCalories,
         macroBreakdown: {
           protein: mealToEdit.protein,
@@ -62,18 +65,19 @@ export default function EditMealPage() {
           fat: mealToEdit.fat,
         },
       });
-      setIsPageLoading(false); // Page data is now ready
+      setPageState('loaded');
     } else {
-      // Meal log is loaded, but meal with this ID wasn't found
-      toast({ variant: 'destructive', title: 'Meal not found', description: 'Could not find the meal you want to edit.' });
+      // Context is loaded, mealId is present, but meal not found in context.
+      toast({ variant: 'destructive', title: 'Meal not found', description: `The meal you're trying to edit doesn't exist or could not be loaded.` });
       router.replace('/dashboard');
-      // setIsPageLoading(false); // Not strictly needed as redirection will occur
+      setPageState('error');
     }
-  }, [mealId, getMealById, router, toast, mealLogLoading]); // Added mealLogLoading to dependencies
+  }, [mealLogLoading, mealId, getMealById, router, toast]);
 
   const handlePhotoCaptured = useCallback((dataUri: string) => {
     setPhotoDataUri(dataUri);
-    setMealDescription('');
+    // Optionally clear AI description if photo changes, or let user decide
+    // setMealDescription(''); 
   }, []);
 
   const handleEstimate = async () => {
@@ -102,7 +106,7 @@ export default function EditMealPage() {
   };
 
   const handleUpdateMeal = () => {
-    if (!initialMealData) {
+    if (!initialMealData) { // Should be guarded by pageState === 'loaded'
         toast({ variant: 'destructive', title: 'Error', description: 'Original meal data is missing.' });
         return;
     }
@@ -127,7 +131,7 @@ export default function EditMealPage() {
     router.push('/dashboard');
   };
 
-  if (isPageLoading || mealLogLoading) { // Check both loading states
+  if (pageState === 'loading') {
     return (
       <AppLayout>
         <div className="flex min-h-[calc(100vh-150px)] items-center justify-center">
@@ -137,12 +141,12 @@ export default function EditMealPage() {
     );
   }
 
-  if (!initialMealData) {
-    // This case should now only be hit if meal truly doesn't exist after context load
+  if (pageState === 'error' || !initialMealData) {
+    // This covers the case where meal isn't found or another error occurred during loading
     return (
       <AppLayout>
         <div className="container mx-auto max-w-3xl px-4 py-8 text-center">
-          <p className="text-lg text-destructive">Meal not found.</p>
+          <p className="text-lg text-destructive">Meal not found or an error occurred.</p>
           <Button onClick={() => router.push('/dashboard')} variant="link" className="mt-4">
             <ChevronLeft className="mr-2 h-4 w-4" /> Go to Dashboard
           </Button>
@@ -151,6 +155,7 @@ export default function EditMealPage() {
     );
   }
   
+  // pageState === 'loaded' and initialMealData is available
   const canUpdateMeal = estimation && estimation.isMealDetected && estimation.estimatedCalories != null && estimation.macroBreakdown != null && photoDataUri;
 
   return (
@@ -164,7 +169,7 @@ export default function EditMealPage() {
 
           <MealCapture 
             onPhotoCaptured={handlePhotoCaptured} 
-            initialPhotoDataUri={photoDataUri} 
+            initialPhotoDataUri={photoDataUri} // photoDataUri state is initialized from initialMealData
           />
 
           {photoDataUri && (
