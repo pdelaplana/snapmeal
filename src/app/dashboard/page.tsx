@@ -6,7 +6,7 @@ import AppLayout from "@/components/layout/app-layout";
 import MealLogList from "@/components/meal/meal-log-list";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, LineChart } from "lucide-react"; // Added LineChart
 import { useMealLog } from '@/context/meal-log-context';
 import { isToday } from 'date-fns';
 
@@ -35,14 +35,24 @@ export default function DashboardPage() {
           <h1 className="font-headline text-3xl font-bold text-foreground">
             Your Meal Log
           </h1>
-          {showMainAddButton && (
-            <Link href="/add-meal">
-              <Button variant="default" size="lg">
-                <PlusCircle className="mr-2 h-5 w-5" />
-                Add New Meal
-              </Button>
-            </Link>
-          )}
+          <div className="flex flex-col gap-2 sm:flex-row">
+            {!loading && meals.length > 0 && (
+              <Link href="/summary">
+                <Button variant="outline" size="lg">
+                  <LineChart className="mr-2 h-5 w-5" />
+                  View Summary
+                </Button>
+              </Link>
+            )}
+            {showMainAddButton && (
+              <Link href="/add-meal">
+                <Button variant="default" size="lg">
+                  <PlusCircle className="mr-2 h-5 w-5" />
+                  Add New Meal
+                </Button>
+              </Link>
+            )}
+          </div>
         </div>
         <MealLogList />
       </div>
