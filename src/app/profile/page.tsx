@@ -7,15 +7,38 @@ import { useMealLog } from "@/context/meal-log-context";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { UserCircle, Settings, BarChart3, ChevronRight, Palette, Bell } from "lucide-react";
+import { Settings, BarChart3, ChevronRight, Palette, Camera } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
-import { useMemo } from "react";
-import { format, differenceInCalendarDays, startOfDay } from "date-fns";
+import { useState, useMemo, useEffect, useCallback } from "react";
+import { format, startOfDay } from "date-fns";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import MealCapture from "@/components/meal/meal-capture"; // Reusing MealCapture
+
+const PROFILE_PHOTO_STORAGE_KEY = 'snapmeal_profile_photo_uri';
 
 export default function ProfilePage() {
   const { user } = useAuth();
   const { meals } = useMealLog();
+  const [profilePhotoUri, setProfilePhotoUri] = useState<string | null>(null);
 
+  useEffect(() => {
+    const storedPhotoUri = localStorage.getItem(PROFILE_PHOTO_STORAGE_KEY);
+    if (storedPhotoUri) {
+      setProfilePhotoUri(storedPhotoUri);
+    }
+  }, []);
+
+  const handleProfilePhotoCaptured = useCallback((dataUri: string) => {
+    if (dataUri) {
+      setProfilePhotoUri(dataUri);
+      localStorage.setItem(PROFILE_PHOTO_STORAGE_KEY, dataUri);
+    } else {
+      setProfilePhotoUri(null);
+      localStorage.removeItem(PROFILE_PHOTO_STORAGE_KEY);
+    }
+  }, []);
+  
+  const userInitial = user?.email ? user.email.charAt(0).toUpperCase() : "?";
   const totalMealsLogged = meals.length;
 
   const averageDailyCaloriesLast7Days = useMemo(() => {
@@ -25,8 +48,6 @@ export default function ProfilePage() {
     if (recentMeals.length === 0) return 0;
 
     const calorieSum = recentMeals.reduce((sum, meal) => sum + (meal.estimatedCalories ?? 0), 0);
-    
-    // Calculate unique days within the last 7 days that have meals
     const uniqueDaysWithMeals = new Set(recentMeals.map(meal => format(new Date(meal.timestamp), 'yyyy-MM-dd'))).size;
 
     return uniqueDaysWithMeals > 0 ? calorieSum / uniqueDaysWithMeals : 0;
@@ -40,12 +61,36 @@ export default function ProfilePage() {
     <AppLayout>
       <div className="container mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="mb-8 text-center">
-          <UserCircle className="mx-auto mb-4 h-20 w-20 text-primary" />
+          <Avatar className="mx-auto mb-4 h-24 w-24 text-3xl">
+            <AvatarImage src={profilePhotoUri || undefined} alt={user.email || "User"} data-ai-hint="person portrait" />
+            <AvatarFallback className="bg-primary text-primary-foreground">
+              {userInitial}
+            </AvatarFallback>
+          </Avatar>
           <h1 className="font-headline text-3xl font-bold text-foreground">Your Profile</h1>
           <p className="text-muted-foreground">{user.email}</p>
         </div>
 
         <div className="space-y-8">
+          <Card className="shadow-md">
+            <CardHeader>
+              <CardTitle className="flex items-center text-xl">
+                <Camera className="mr-3 h-6 w-6 text-primary" />
+                Profile Photo
+              </CardTitle>
+              <CardDescription>Update your profile picture by uploading an image or taking a new one.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <MealCapture 
+                onPhotoCaptured={handleProfilePhotoCaptured} 
+                initialPhotoDataUri={profilePhotoUri}
+              />
+              <p className="mt-2 text-xs text-muted-foreground">
+                Note: Labels in the photo capture tool might refer to "meal photo". This tool is reused for profile picture functionality.
+              </p>
+            </CardContent>
+          </Card>
+
           <Card className="shadow-md">
             <CardHeader>
               <CardTitle className="flex items-center text-xl">
