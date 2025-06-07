@@ -13,9 +13,20 @@ import { estimateCaloriesMacros, type EstimateCaloriesMacrosOutput } from '@/ai/
 import { useToast } from '@/hooks/use-toast';
 import { useMealLog } from '@/context/meal-log-context';
 import type { Meal } from '@/types';
-import { Wand2, Save, Loader2, Info, AlertTriangle, ChevronLeft } from 'lucide-react';
+import { Wand2, Save, Loader2, Info, AlertTriangle, ChevronLeft, Trash2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { LoadingSpinner } from '@/components/loading-spinner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 type PageState = 'loading' | 'loaded' | 'error';
 
@@ -24,7 +35,7 @@ export default function EditMealPage() {
   const params = useParams();
   const mealId = params.mealId as string;
 
-  const { getMealById, updateMeal, loading: mealLogLoading } = useMealLog();
+  const { getMealById, updateMeal, deleteMeal, loading: mealLogLoading } = useMealLog();
   const { toast } = useToast();
 
   const [initialMealData, setInitialMealData] = useState<Meal | null>(null);
@@ -41,7 +52,6 @@ export default function EditMealPage() {
       return;
     }
 
-    // mealLogLoading is false, context is loaded.
     if (!mealId) {
       toast({ variant: 'destructive', title: 'Error', description: 'Meal ID is missing.' });
       router.replace('/dashboard');
@@ -54,10 +64,10 @@ export default function EditMealPage() {
     if (mealToEdit) {
       setInitialMealData(mealToEdit);
       setPhotoDataUri(mealToEdit.photoDataUri);
-      setMealDescription(''); // AI description is for new estimations
+      setMealDescription(''); 
       setNotes(mealToEdit.notes || '');
       setEstimation({
-        isMealDetected: true, // Assumed for an existing logged meal
+        isMealDetected: true, 
         estimatedCalories: mealToEdit.estimatedCalories,
         macroBreakdown: {
           protein: mealToEdit.protein,
@@ -67,7 +77,6 @@ export default function EditMealPage() {
       });
       setPageState('loaded');
     } else {
-      // Context is loaded, mealId is present, but meal not found in context.
       toast({ variant: 'destructive', title: 'Meal not found', description: `The meal you're trying to edit doesn't exist or could not be loaded.` });
       router.replace('/dashboard');
       setPageState('error');
@@ -76,8 +85,6 @@ export default function EditMealPage() {
 
   const handlePhotoCaptured = useCallback((dataUri: string) => {
     setPhotoDataUri(dataUri);
-    // Optionally clear AI description if photo changes, or let user decide
-    // setMealDescription(''); 
   }, []);
 
   const handleEstimate = async () => {
@@ -106,7 +113,7 @@ export default function EditMealPage() {
   };
 
   const handleUpdateMeal = () => {
-    if (!initialMealData) { // Should be guarded by pageState === 'loaded'
+    if (!initialMealData) { 
         toast({ variant: 'destructive', title: 'Error', description: 'Original meal data is missing.' });
         return;
     }
@@ -131,6 +138,13 @@ export default function EditMealPage() {
     router.push('/dashboard');
   };
 
+  const handleDeleteMeal = () => {
+    if (!initialMealData) return;
+    deleteMeal(initialMealData.id);
+    toast({ title: 'Meal Deleted', description: 'The meal has been removed from your log.' });
+    router.push('/dashboard');
+  };
+
   if (pageState === 'loading') {
     return (
       <AppLayout>
@@ -142,7 +156,6 @@ export default function EditMealPage() {
   }
 
   if (pageState === 'error' || !initialMealData) {
-    // This covers the case where meal isn't found or another error occurred during loading
     return (
       <AppLayout>
         <div className="container mx-auto max-w-3xl px-4 py-8 text-center">
@@ -155,7 +168,6 @@ export default function EditMealPage() {
     );
   }
   
-  // pageState === 'loaded' and initialMealData is available
   const canUpdateMeal = estimation && estimation.isMealDetected && estimation.estimatedCalories != null && estimation.macroBreakdown != null && photoDataUri;
 
   return (
@@ -169,7 +181,7 @@ export default function EditMealPage() {
 
           <MealCapture 
             onPhotoCaptured={handlePhotoCaptured} 
-            initialPhotoDataUri={photoDataUri} // photoDataUri state is initialized from initialMealData
+            initialPhotoDataUri={photoDataUri} 
           />
 
           {photoDataUri && (
@@ -223,10 +235,35 @@ export default function EditMealPage() {
                 className="mt-2 min-h-[100px]"
               />
             </div>
-            <Button onClick={handleUpdateMeal} disabled={!canUpdateMeal || isEstimating} size="lg" className="w-full">
-              <Save className="mr-2 h-5 w-5" />
-              Update Meal
-            </Button>
+            <div className="flex flex-col gap-4 sm:flex-row">
+              <Button onClick={handleUpdateMeal} disabled={!canUpdateMeal || isEstimating} size="lg" className="flex-1">
+                <Save className="mr-2 h-5 w-5" />
+                Update Meal
+              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" size="lg" className="flex-1">
+                    <Trash2 className="mr-2 h-5 w-5" />
+                    Delete Meal
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This action cannot be undone. This will permanently delete this meal
+                      from your log.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteMeal}>
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
           </div>
         </div>
       </div>

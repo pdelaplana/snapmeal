@@ -9,6 +9,7 @@ interface MealLogContextType {
   meals: Meal[];
   addMeal: (newMealData: Omit<Meal, 'id' | 'timestamp'>) => void;
   updateMeal: (mealId: string, updatedMealData: Omit<Meal, 'id' | 'timestamp'>) => void;
+  deleteMeal: (mealId: string) => void;
   getMealById: (id: string) => Meal | undefined;
   loading: boolean;
 }
@@ -60,16 +61,17 @@ export function MealLogProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
+  const deleteMeal = useCallback((mealId: string) => {
+    setMeals(prevMeals => prevMeals.filter(meal => meal.id !== mealId));
+  }, []);
+
   const getMealById = useCallback((id: string): Meal | undefined => {
     return meals.find(meal => meal.id === id);
   }, [meals]);
   
   useEffect(() => {
-    // Ensure meals are always sorted by timestamp descending whenever meals array changes
-    // This handles initial load and any updates
     if (meals.length > 0) {
       const sortedMeals = [...meals].sort((a, b) => b.timestamp - a.timestamp);
-      // Only update state if the order has actually changed to prevent infinite loops
       if (JSON.stringify(sortedMeals) !== JSON.stringify(meals)) {
         setMeals(sortedMeals);
       }
@@ -78,7 +80,7 @@ export function MealLogProvider({ children }: { children: ReactNode }) {
 
 
   return (
-    <MealLogContext.Provider value={{ meals, addMeal, updateMeal, getMealById, loading }}>
+    <MealLogContext.Provider value={{ meals, addMeal, updateMeal, deleteMeal, getMealById, loading }}>
       {children}
     </MealLogContext.Provider>
   );
