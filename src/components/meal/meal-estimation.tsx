@@ -47,11 +47,24 @@ export default function MealEstimation({ estimation, isLoading, descriptionUsedF
       <CardHeader>
         <CardTitle className="text-xl font-semibold">Estimated Nutrition</CardTitle>
         {typeof descriptionUsedForEstimation === 'boolean' && (
-          <p className="pt-1 text-xs text-muted-foreground">
-            {descriptionUsedForEstimation
-              ? 'Enhanced by your description.'
-              : 'Based on photo only. Providing a description can improve accuracy.'}
-          </p>
+          <div className="pt-3 space-y-1">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-medium text-muted-foreground">Input used:</span>
+              <span className="font-semibold text-foreground">
+                {descriptionUsedForEstimation ? "Photo + Description" : "Photo Only"}
+              </span>
+            </div>
+            <Progress 
+              value={descriptionUsedForEstimation ? 100 : 60} 
+              className="h-1.5 w-full"
+              aria-label={descriptionUsedForEstimation ? "Estimation based on photo and description" : "Estimation based on photo only"}
+            />
+            {descriptionUsedForEstimation === false && (
+              <p className="text-xs text-muted-foreground pt-0.5">
+                Tip: Adding a description can improve estimation accuracy.
+              </p>
+            )}
+          </div>
         )}
       </CardHeader>
       <CardContent className="space-y-6">
