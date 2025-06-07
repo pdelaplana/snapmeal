@@ -26,7 +26,7 @@ const EstimateCaloriesMacrosInputSchema = z.object({
 });
 export type EstimateCaloriesMacrosInput = z.infer<typeof EstimateCaloriesMacrosInputSchema>;
 
-export const EstimateCaloriesMacrosOutputSchema = z.object({
+const EstimateCaloriesMacrosOutputSchema = z.object({
   isMealDetected: z.boolean().describe('Whether a meal was detected in the photo.'),
   estimatedCalories: z.number().optional().nullable().describe('The estimated calorie count of the meal. Provided only if a meal is detected, otherwise null.'),
   macroBreakdown: z.object({
@@ -54,7 +54,7 @@ If a meal is detected:
 
 If no meal is detected in the photo:
   Set 'isMealDetected' to false.
-  'estimatedCalories' and 'macroBreakdown' should be set to null or omitted from the JSON response.
+  'estimatedCalories' and 'macroBreakdown' should be set to null.
 
 Use the following as sources of information about the meal.
 Photo: {{media url=photoDataUri}}
@@ -76,15 +76,11 @@ Example for a detected meal:
     "fat": 20
   }
 }
-Example if no meal is detected (option 1: with nulls):
+Example if no meal is detected:
 {
   "isMealDetected": false,
   "estimatedCalories": null,
   "macroBreakdown": null
-}
-Example if no meal is detected (option 2: fields omitted):
-{
-  "isMealDetected": false
 }`,
 });
 
