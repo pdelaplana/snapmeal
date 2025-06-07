@@ -1,10 +1,10 @@
 
 import type { Meal } from '@/types';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { CalendarDays, Flame, Beef, Wheat, Drumstick, Pencil, Tag, ListTree } from 'lucide-react';
+import { CalendarDays, Flame, Beef, Wheat, Drumstick, Pencil, ListTree } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 interface MealLogItemProps {
@@ -38,17 +38,18 @@ export default function MealLogItem({ meal }: MealLogItemProps) {
         </Link>
       </CardHeader>
       <CardContent className="p-4 md:p-6">
-        <div className="mb-2 flex items-center justify-between">
-          <div className="flex items-center text-sm text-muted-foreground">
-            <CalendarDays className="mr-2 h-4 w-4" />
-            <span>{new Date(meal.timestamp).toLocaleDateString()} - {new Date(meal.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+        {meal.mealType && (
+          <div className="mb-3">
+            <h3 className="text-xl font-semibold text-foreground">{meal.mealType}</h3>
+            <p className="text-xs text-muted-foreground">
+              {new Date(meal.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
+            </p>
           </div>
-          {meal.mealType && (
-            <Badge variant="secondary" className="flex items-center gap-1">
-              <Tag className="h-3 w-3" />
-              {meal.mealType}
-            </Badge>
-          )}
+        )}
+        
+        <div className="mb-3 flex items-center text-sm text-muted-foreground">
+          <CalendarDays className="mr-2 h-4 w-4" />
+          <span>{new Date(meal.timestamp).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span>
         </div>
         
         <div className="mb-3 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
