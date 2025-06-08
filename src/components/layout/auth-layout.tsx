@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react';
-import { Utensils } from 'lucide-react';
+import { Utensils } from "lucide-react";
+import type { ReactNode } from "react";
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (

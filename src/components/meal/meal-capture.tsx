@@ -1,31 +1,35 @@
-
 "use client";
 
-import type { ChangeEvent } from 'react';
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import Image from 'next/image';
-import { UploadCloud, Trash2, Camera, XCircle, VideoOff } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { useToast } from '@/hooks/use-toast';
-import { LoadingSpinner } from '@/components/loading-spinner';
+import { LoadingSpinner } from "@/components/loading-spinner";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { Camera, Trash2, UploadCloud, VideoOff, XCircle } from "lucide-react";
+import Image from "next/image";
+import type { ChangeEvent } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface MealCaptureProps {
   onPhotoCaptured: (photoDataUri: string) => void;
   initialPhotoDataUri?: string | null;
 }
 
-export default function MealCapture({ onPhotoCaptured, initialPhotoDataUri }: MealCaptureProps) {
+export default function MealCapture({
+  onPhotoCaptured,
+  initialPhotoDataUri,
+}: MealCaptureProps) {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  const [currentView, setCurrentView] = useState<'idle' | 'camera'>('idle');
-  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+  const [currentView, setCurrentView] = useState<"idle" | "camera">("idle");
+  const [hasCameraPermission, setHasCameraPermission] = useState<
+    boolean | null
+  >(null);
   const [isCameraInitializing, setIsCameraInitializing] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -42,7 +46,7 @@ export default function MealCapture({ onPhotoCaptured, initialPhotoDataUri }: Me
   const stopCameraStream = useCallback(() => {
     if (videoRef.current && videoRef.current.srcObject) {
       const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach(track => track.stop());
+      stream.getTracks().forEach((track) => track.stop());
       videoRef.current.srcObject = null;
     }
   }, []);
@@ -51,7 +55,7 @@ export default function MealCapture({ onPhotoCaptured, initialPhotoDataUri }: Me
     let streamInstance: MediaStream | null = null;
 
     const getCameraPermission = async () => {
-      if (currentView !== 'camera') {
+      if (currentView !== "camera") {
         stopCameraStream(); // Ensure stream is stopped if view changes
         return;
       }
@@ -61,21 +65,24 @@ export default function MealCapture({ onPhotoCaptured, initialPhotoDataUri }: Me
       setHasCameraPermission(null);
 
       try {
-        streamInstance = await navigator.mediaDevices.getUserMedia({ video: true });
+        streamInstance = await navigator.mediaDevices.getUserMedia({
+          video: true,
+        });
         setHasCameraPermission(true);
         if (videoRef.current) {
           videoRef.current.srcObject = streamInstance;
         }
       } catch (error: any) {
-        console.error('Error accessing camera:', error);
+        console.error("Error accessing camera:", error);
         setHasCameraPermission(false);
-        const errorMessage = error.name === 'NotAllowedError' 
-          ? 'Camera permission was denied. Please enable it in your browser settings.'
-          : `Could not access camera: ${error.message}. Ensure it's not in use by another app.`;
+        const errorMessage =
+          error.name === "NotAllowedError"
+            ? "Camera permission was denied. Please enable it in your browser settings."
+            : `Could not access camera: ${error.message}. Ensure it's not in use by another app.`;
         setCameraError(errorMessage);
         toast({
-          variant: 'destructive',
-          title: 'Camera Access Issue',
+          variant: "destructive",
+          title: "Camera Access Issue",
           description: errorMessage,
         });
       } finally {
@@ -85,19 +92,19 @@ export default function MealCapture({ onPhotoCaptured, initialPhotoDataUri }: Me
 
     getCameraPermission();
 
-    return () => { // Cleanup function
+    return () => {
+      // Cleanup function
       if (streamInstance) {
-        streamInstance.getTracks().forEach(track => track.stop());
+        streamInstance.getTracks().forEach((track) => track.stop());
       }
       // Additional check for videoRef.current.srcObject because streamInstance might not be set if permission denied early
       if (videoRef.current && videoRef.current.srcObject) {
-         const activeStream = videoRef.current.srcObject as MediaStream;
-         activeStream.getTracks().forEach(track => track.stop());
-         videoRef.current.srcObject = null;
+        const activeStream = videoRef.current.srcObject as MediaStream;
+        activeStream.getTracks().forEach((track) => track.stop());
+        videoRef.current.srcObject = null;
       }
     };
   }, [currentView, toast, stopCameraStream]);
-
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -120,53 +127,63 @@ export default function MealCapture({ onPhotoCaptured, initialPhotoDataUri }: Me
       fileInputRef.current.value = "";
     }
     onPhotoCaptured("");
-    if (currentView === 'camera') {
-      setCurrentView('idle'); // Also stop camera if active
+    if (currentView === "camera") {
+      setCurrentView("idle"); // Also stop camera if active
     }
   };
 
   const handleTakePhotoClick = () => {
     setPhotoPreview(null); // Clear any existing preview
     onPhotoCaptured(""); // Notify parent that current photo is cleared for retake
-    setCurrentView('camera');
+    setCurrentView("camera");
   };
-  
+
   const handleSnapPhoto = () => {
     if (videoRef.current && canvasRef.current && hasCameraPermission) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
-      const context = canvas.getContext('2d');
+      const context = canvas.getContext("2d");
       if (context) {
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const dataUri = canvas.toDataURL('image/jpeg');
+        const dataUri = canvas.toDataURL("image/jpeg");
         setPhotoPreview(dataUri);
         onPhotoCaptured(dataUri);
         setFileName(`capture-${Date.now()}.jpg`);
-        setCurrentView('idle'); // Switch back to idle to show preview
+        setCurrentView("idle"); // Switch back to idle to show preview
         stopCameraStream();
       } else {
-        toast({ variant: 'destructive', title: 'Capture Failed', description: 'Could not get canvas context.' });
+        toast({
+          variant: "destructive",
+          title: "Capture Failed",
+          description: "Could not get canvas context.",
+        });
       }
     } else {
-      toast({ variant: 'destructive', title: 'Capture Failed', description: 'Camera not ready or permission denied.' });
+      toast({
+        variant: "destructive",
+        title: "Capture Failed",
+        description: "Camera not ready or permission denied.",
+      });
     }
   };
 
   const handleCancelCamera = () => {
-    setCurrentView('idle');
+    setCurrentView("idle");
     stopCameraStream();
     setCameraError(null);
     setHasCameraPermission(null);
   };
 
-  if (currentView === 'camera') {
+  if (currentView === "camera") {
     return (
       <div className="space-y-6">
         <div className="space-y-2">
           <Label className="text-lg font-medium">Take Meal Photo</Label>
-          <p className="text-sm text-muted-foreground">Position your meal in the frame and snap a photo.</p>
+          <p className="text-sm text-muted-foreground">
+            Position your meal in the frame and snap a photo.
+          </p>
         </div>
         {isCameraInitializing && (
           <div className="flex flex-col items-center justify-center aspect-video w-full rounded-lg border-2 border-dashed border-primary bg-card p-8 text-center">
@@ -183,17 +200,32 @@ export default function MealCapture({ onPhotoCaptured, initialPhotoDataUri }: Me
         )}
         {hasCameraPermission === true && (
           <div className="relative mx-auto aspect-video w-full max-w-lg overflow-hidden rounded-lg border-2 border-primary bg-black shadow-md">
-            <video ref={videoRef} className="h-full w-full object-contain" autoPlay muted playsInline />
+            <video
+              ref={videoRef}
+              className="h-full w-full object-contain"
+              autoPlay
+              muted
+              playsInline
+            />
           </div>
         )}
         <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
           {hasCameraPermission === true && !isCameraInitializing && (
-            <Button onClick={handleSnapPhoto} size="lg" className="w-full sm:w-auto">
+            <Button
+              onClick={handleSnapPhoto}
+              size="lg"
+              className="w-full sm:w-auto"
+            >
               <Camera className="mr-2 h-5 w-5" />
               Snap Photo
             </Button>
           )}
-          <Button onClick={handleCancelCamera} variant="outline" size="lg" className="w-full sm:w-auto">
+          <Button
+            onClick={handleCancelCamera}
+            variant="outline"
+            size="lg"
+            className="w-full sm:w-auto"
+          >
             <XCircle className="mr-2 h-5 w-5" />
             Cancel Camera
           </Button>
@@ -211,25 +243,45 @@ export default function MealCapture({ onPhotoCaptured, initialPhotoDataUri }: Me
           {photoPreview ? "Current Meal Photo" : "Add Meal Photo"}
         </Label>
         <p className="text-sm text-muted-foreground">
-          {photoPreview ? "You can replace the current photo or remove it." : "Upload an image or take a new photo of your meal."}
+          {photoPreview
+            ? "You can replace the current photo or remove it."
+            : "Upload an image or take a new photo of your meal."}
         </p>
       </div>
-      
+
       {photoPreview ? (
         <div className="space-y-4">
           <div className="relative mx-auto aspect-video w-full max-w-lg overflow-hidden rounded-lg border-2 border-dashed border-primary shadow-md">
-            <Image src={photoPreview} alt="Meal preview" layout="fill" objectFit="contain" data-ai-hint="food meal" />
+            <Image
+              src={photoPreview}
+              alt="Meal preview"
+              layout="fill"
+              objectFit="contain"
+              data-ai-hint="food meal"
+            />
           </div>
           <div className="flex flex-col items-center gap-2 sm:flex-row sm:justify-center">
-            <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full sm:w-auto">
+            <Button
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full sm:w-auto"
+            >
               <UploadCloud className="mr-2 h-4 w-4" />
               Change via Upload
             </Button>
-            <Button variant="outline" onClick={handleTakePhotoClick} className="w-full sm:w-auto">
+            <Button
+              variant="outline"
+              onClick={handleTakePhotoClick}
+              className="w-full sm:w-auto"
+            >
               <Camera className="mr-2 h-4 w-4" />
               Retake with Camera
             </Button>
-            <Button variant="destructive" onClick={handleRemovePhoto} className="w-full sm:w-auto">
+            <Button
+              variant="destructive"
+              onClick={handleRemovePhoto}
+              className="w-full sm:w-auto"
+            >
               <Trash2 className="mr-2 h-4 w-4" />
               Remove Photo
             </Button>
@@ -243,15 +295,22 @@ export default function MealCapture({ onPhotoCaptured, initialPhotoDataUri }: Me
             onDrop={(e) => {
               e.preventDefault();
               if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                if (fileInputRef.current) fileInputRef.current.files = e.dataTransfer.files;
-                handleFileChange({ target: fileInputRef.current } as ChangeEvent<HTMLInputElement>);
+                if (fileInputRef.current)
+                  fileInputRef.current.files = e.dataTransfer.files;
+                handleFileChange({
+                  target: fileInputRef.current,
+                } as ChangeEvent<HTMLInputElement>);
               }
             }}
             onDragOver={(e) => e.preventDefault()}
           >
             <UploadCloud className="mb-4 h-12 w-12 text-muted-foreground" />
-            <p className="mb-2 font-semibold text-foreground">Click or drag & drop to upload</p>
-            <p className="text-xs text-muted-foreground">PNG, JPG, GIF up to 10MB</p>
+            <p className="mb-2 font-semibold text-foreground">
+              Click or drag & drop to upload
+            </p>
+            <p className="text-xs text-muted-foreground">
+              PNG, JPG, GIF up to 10MB
+            </p>
           </div>
           <div className="text-center">
             <Button variant="outline" onClick={handleTakePhotoClick} size="lg">
@@ -271,8 +330,11 @@ export default function MealCapture({ onPhotoCaptured, initialPhotoDataUri }: Me
         onChange={handleFileChange}
       />
       <canvas ref={canvasRef} className="hidden"></canvas>
-      {fileName && !photoPreview && currentView === 'idle' && <p className="text-sm text-muted-foreground">Selected for upload: {fileName}</p>}
+      {fileName && !photoPreview && currentView === "idle" && (
+        <p className="text-sm text-muted-foreground">
+          Selected for upload: {fileName}
+        </p>
+      )}
     </div>
   );
 }
-

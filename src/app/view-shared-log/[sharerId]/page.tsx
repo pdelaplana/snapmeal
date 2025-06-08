@@ -1,27 +1,31 @@
-
 "use client";
 
-import React, { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import AppLayout from '@/components/layout/app-layout';
-import MealLogList from '@/components/meal/meal-log-list';
-import { LoadingSpinner } from '@/components/loading-spinner';
-import type { Meal } from '@/types';
-import { Button } from '@/components/ui/button';
-import { ChevronLeft, Construction } from 'lucide-react';
-import { useMealLog } from '@/context/meal-log-context';
-import { config } from '@/lib/config'; // Import config for feature flags
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-
+import AppLayout from "@/components/layout/app-layout";
+import { LoadingSpinner } from "@/components/loading-spinner";
+import MealLogList from "@/components/meal/meal-log-list";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useMealLog } from "@/context/meal-log-context";
+import { config } from "@/lib/config"; // Import config for feature flags
+import type { Meal } from "@/types";
+import { ChevronLeft, Construction } from "lucide-react";
+import { useParams, useRouter } from "next/navigation";
+import React, { useEffect, useState } from "react";
 
 interface SharedLogContextValue {
   meals: Meal[];
   loading: boolean;
 }
 
-const SharedLogContext = React.createContext<SharedLogContextValue | undefined>(undefined);
+const SharedLogContext = React.createContext<SharedLogContextValue | undefined>(
+  undefined,
+);
 
-export function SharedLogProvider({ children, meals, loading }: { children: React.ReactNode, meals: Meal[], loading: boolean}) {
+export function SharedLogProvider({
+  children,
+  meals,
+  loading,
+}: { children: React.ReactNode; meals: Meal[]; loading: boolean }) {
   return (
     <SharedLogContext.Provider value={{ meals, loading }}>
       {children}
@@ -32,7 +36,7 @@ export function SharedLogProvider({ children, meals, loading }: { children: Reac
 export const useSharedLog = () => {
   const context = React.useContext(SharedLogContext);
   if (context === undefined) {
-    throw new Error('useSharedLog must be used within a SharedLogProvider');
+    throw new Error("useSharedLog must be used within a SharedLogProvider");
   }
   return context;
 };
@@ -48,7 +52,6 @@ export default function ViewSharedLogPage() {
 
   const { getMealById: mainUserGetMealById } = useMealLog();
 
-
   useEffect(() => {
     if (!config.features.enableSharing) {
       setIsLoading(false);
@@ -61,16 +64,19 @@ export default function ViewSharedLogPage() {
         const mealStorageKey = `snapmeal_log_${sharerId}`;
         const storedMealsRaw = localStorage.getItem(mealStorageKey);
         if (storedMealsRaw) {
-          const parsedMeals: Meal[] = JSON.parse(storedMealsRaw).map((meal: any) => ({
-            ...meal,
-            recognizedItems: meal.recognizedItems ?? null,
-          }));
+          const parsedMeals: Meal[] = JSON.parse(storedMealsRaw).map(
+            (meal: any) => ({
+              ...meal,
+              recognizedItems: meal.recognizedItems ?? null,
+            }),
+          );
           setSharedMeals(parsedMeals.sort((a, b) => b.timestamp - a.timestamp));
 
-          if (sharerId === 'nutritionist@demo.com') setSharerName('Demo Nutritionist');
-          else if (sharerId === 'friend@demo.com') setSharerName('Active Friend');
+          if (sharerId === "nutritionist@demo.com")
+            setSharerName("Demo Nutritionist");
+          else if (sharerId === "friend@demo.com")
+            setSharerName("Active Friend");
           else setSharerName(sharerId);
-
         } else {
           setSharedMeals([]);
         }
@@ -95,9 +101,14 @@ export default function ViewSharedLogPage() {
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground">
-                The meal log sharing functionality is currently under development and not available.
+                The meal log sharing functionality is currently under
+                development and not available.
               </p>
-               <Button variant="outline" onClick={() => router.back()} className="mt-6">
+              <Button
+                variant="outline"
+                onClick={() => router.back()}
+                className="mt-6"
+              >
                 <ChevronLeft className="mr-2 h-4 w-4" />
                 Go Back
               </Button>
@@ -133,13 +144,14 @@ export default function ViewSharedLogPage() {
             Back
           </Button>
         </div>
-        
+
         <SharedLogProvider meals={sharedMeals} loading={isLoading}>
-            <MealLogList />
+          <MealLogList />
         </SharedLogProvider>
-        
+
         <p className="mt-6 text-center text-xs text-muted-foreground">
-          You are viewing a shared meal log. Editing is not available for shared logs.
+          You are viewing a shared meal log. Editing is not available for shared
+          logs.
         </p>
       </div>
     </AppLayout>

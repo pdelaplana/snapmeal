@@ -1,35 +1,38 @@
-
 "use server";
 
-import { auth } from "@/lib/firebase"; 
-import { 
-  createUserWithEmailAndPassword, 
-  signInWithEmailAndPassword,
+import { auth } from "@/lib/firebase";
+import {
+  type AuthError,
+  createUserWithEmailAndPassword,
   signOut as firebaseSignOut,
-  type AuthError
-} from "firebase/auth"; 
+  signInWithEmailAndPassword,
+} from "firebase/auth";
 import { z } from "zod";
 
 const emailPasswordSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
-  password: z.string().min(6, { message: "Password must be at least 6 characters." }),
+  password: z
+    .string()
+    .min(6, { message: "Password must be at least 6 characters." }),
 });
 
 function formatFirebaseError(error: AuthError) {
   switch (error.code) {
-    case 'auth/email-already-in-use':
-      return { email: ['This email address is already in use.'] };
-    case 'auth/invalid-email':
-      return { email: ['Please enter a valid email address.'] };
-    case 'auth/weak-password':
-      return { password: ['Password is too weak. It must be at least 6 characters.'] };
-    case 'auth/user-not-found':
-    case 'auth/wrong-password':
-    case 'auth/invalid-credential': // Covers both user-not-found and wrong-password in newer SDK versions
-      return { form: ['Invalid email or password. Please try again.'] };
+    case "auth/email-already-in-use":
+      return { email: ["This email address is already in use."] };
+    case "auth/invalid-email":
+      return { email: ["Please enter a valid email address."] };
+    case "auth/weak-password":
+      return {
+        password: ["Password is too weak. It must be at least 6 characters."],
+      };
+    case "auth/user-not-found":
+    case "auth/wrong-password":
+    case "auth/invalid-credential": // Covers both user-not-found and wrong-password in newer SDK versions
+      return { form: ["Invalid email or password. Please try again."] };
     default:
       console.error("Firebase Auth Error:", error);
-      return { form: ['An unexpected error occurred. Please try again.'] };
+      return { form: ["An unexpected error occurred. Please try again."] };
   }
 }
 
@@ -40,12 +43,22 @@ export async function registerUser(prevState: any, formData: FormData) {
   if (!parsed.success) {
     return { success: false, error: parsed.error.flatten().fieldErrors };
   }
-  
+
   const { email, password } = parsed.data;
 
   try {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    return { success: true, email: userCredential.user.email };
+    const userCredential = await createUserWithEmailAndPassword(
+      auth,
+      email,
+      password,
+    );
+    // Assert that email is never null
+    if (!userCredential.user.email) {
+      // This should theoretically not happen with email/password sign-up
+      throw new Error("User created but email is null.");
+    }
+
+    return { success: true, email: userCredential.user.email || "" };
   } catch (error) {
     return { success: false, error: formatFirebaseError(error as AuthError) };
   }
@@ -61,8 +74,18 @@ export async function loginUser(prevState: any, formData: FormData) {
   const { email, password } = parsed.data;
 
   try {
-    const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    return { success: true, email: userCredential.user.email };
+    const userCredential = await signInWithEmailAndPassword(
+      auth,
+      email,
+      password,
+    );
+    // Assert that email is never null
+    if (!userCredential.user.email) {
+      // This should theoretically not happen with email/password sign-in
+      throw new Error("User signed in but email is null.");
+    }
+
+    return { success: true, email: userCredential.user.email as string };
   } catch (error) {
     return { success: false, error: formatFirebaseError(error as AuthError) };
   }
@@ -74,6 +97,10 @@ export async function signOutUser() {
     return { success: true, message: "User signed out successfully." };
   } catch (error) {
     console.error("Error signing out:", error);
-    return { success: false, message: "Failed to sign out.", error: (error as AuthError).message };
+    return {
+      success: false,
+      message: "Failed to sign out.",
+      error: (error as AuthError).message,
+    };
   }
 }

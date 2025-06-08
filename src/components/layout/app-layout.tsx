@@ -1,11 +1,11 @@
 "use client";
 
-import type { ReactNode } from 'react';
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/context/auth-context';
-import SiteHeader from '@/components/site-header';
-import { LoadingSpinner } from '@/components/loading-spinner';
+import { LoadingSpinner } from "@/components/loading-spinner";
+import SiteHeader from "@/components/site-header";
+import { useAuth } from "@/context/auth-context";
+import { useRouter } from "next/navigation";
+import type { ReactNode } from "react";
+import { useEffect } from "react";
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
@@ -13,7 +13,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!loading && !user) {
-      router.replace('/login');
+      router.replace("/login");
     }
   }, [user, loading, router]);
 
@@ -32,9 +32,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col">
       <SiteHeader />
-      <main className="flex-1">
-        {children}
-      </main>
+      <main className="flex-1">{children}</main>
       <footer className="py-6 text-center text-sm text-muted-foreground">
         © {new Date().getFullYear()} SnapMeal. All rights reserved.
       </footer>

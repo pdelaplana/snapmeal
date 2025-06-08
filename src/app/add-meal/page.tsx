@@ -1,69 +1,113 @@
-
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import AppLayout from '@/components/layout/app-layout';
-import MealCapture from '@/components/meal/meal-capture';
-import MealEstimation from '@/components/meal/meal-estimation';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { estimateCaloriesMacros } from '@/ai/flows/estimate-calories-macros';
-import type { EstimateCaloriesMacrosOutput } from '@/ai/flows/estimate-calories-macros';
-import { useToast } from '@/hooks/use-toast';
-import { useMealLog } from '@/context/meal-log-context';
-import { useRouter } from 'next/navigation';
-import { Wand2, CheckCircle, Loader2, Info, AlertTriangle, CalendarIcon, Edit3, ListTree } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { estimateCaloriesMacros } from "@/ai/flows/estimate-calories-macros";
+import type { EstimateCaloriesMacrosOutput } from "@/ai/flows/estimate-calories-macros";
+import AppLayout from "@/components/layout/app-layout";
+import MealCapture from "@/components/meal/meal-capture";
+import MealEstimation from "@/components/meal/meal-estimation";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Badge } from '@/components/ui/badge';
-import { mealTypes, estimationTypes, type Meal, type EstimationType } from '@/types';
-import { format } from 'date-fns';
+import { Textarea } from "@/components/ui/textarea";
+import { useMealLog } from "@/context/meal-log-context";
+import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+  type EstimationType,
+  type Meal,
+  estimationTypes,
+  mealTypes,
+} from "@/types";
+import { format } from "date-fns";
+import {
+  AlertTriangle,
+  CalendarIcon,
+  CheckCircle,
+  Edit3,
+  Info,
+  ListTree,
+  Loader2,
+  Wand2,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
 
 export default function AddMealPage() {
   const [photoDataUri, setPhotoDataUri] = useState<string | null>(null);
-  const [mealDescription, setMealDescription] = useState('');
-  const [estimation, setEstimation] = useState<EstimateCaloriesMacrosOutput | null>(null);
+  const [mealDescription, setMealDescription] = useState("");
+  const [estimation, setEstimation] =
+    useState<EstimateCaloriesMacrosOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [notes, setNotes] = useState('');
-  const [selectedMealType, setSelectedMealType] = useState<Meal['mealType'] | undefined>(undefined);
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
-  const [selectedTime, setSelectedTime] = useState<string>(format(new Date(), "HH:mm"));
-  const [descriptionUsedInLastEstimate, setDescriptionUsedInLastEstimate] = useState<boolean | null>(null);
-  const [selectedEstimationType, setSelectedEstimationType] = useState<EstimationType>('calories_macros');
+  const [notes, setNotes] = useState("");
+  const [selectedMealType, setSelectedMealType] = useState<
+    Meal["mealType"] | undefined
+  >(undefined);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(
+    new Date(),
+  );
+  const [selectedTime, setSelectedTime] = useState<string>(
+    format(new Date(), "HH:mm"),
+  );
+  const [descriptionUsedInLastEstimate, setDescriptionUsedInLastEstimate] =
+    useState<boolean | null>(null);
+  const [selectedEstimationType, setSelectedEstimationType] =
+    useState<EstimationType>("calories_macros");
   const [showManualInputs, setShowManualInputs] = useState(true);
 
   // State for manual overrides
-  const [manualCalories, setManualCalories] = useState<string>('');
-  const [manualProtein, setManualProtein] = useState<string>('');
-  const [manualCarbs, setManualCarbs] = useState<string>('');
-  const [manualFat, setManualFat] = useState<string>('');
-  const [loggedRecognizedItems, setLoggedRecognizedItems] = useState<string[] | null>(null);
-  
+  const [manualCalories, setManualCalories] = useState<string>("");
+  const [manualProtein, setManualProtein] = useState<string>("");
+  const [manualCarbs, setManualCarbs] = useState<string>("");
+  const [manualFat, setManualFat] = useState<string>("");
+  const [loggedRecognizedItems, setLoggedRecognizedItems] = useState<
+    string[] | null
+  >(null);
+
   const { toast } = useToast();
   const { addMeal } = useMealLog();
   const router = useRouter();
 
   const handlePhotoCaptured = (dataUri: string) => {
     setPhotoDataUri(dataUri);
-    setEstimation(null); 
+    setEstimation(null);
     setDescriptionUsedInLastEstimate(null);
-    setManualCalories('');
-    setManualProtein('');
-    setManualCarbs('');
-    setManualFat('');
+    setManualCalories("");
+    setManualProtein("");
+    setManualCarbs("");
+    setManualFat("");
     setLoggedRecognizedItems(null);
   };
 
   const handleEstimate = async () => {
     if (!photoDataUri) {
-      toast({ variant: 'destructive', title: 'No Photo', description: 'Please capture or upload a photo first.' });
+      toast({
+        variant: "destructive",
+        title: "No Photo",
+        description: "Please capture or upload a photo first.",
+      });
       return;
     }
     setIsLoading(true);
@@ -71,12 +115,12 @@ export default function AddMealPage() {
     setLoggedRecognizedItems(null);
     setDescriptionUsedInLastEstimate(!!mealDescription.trim());
     try {
-      const result = await estimateCaloriesMacros({ 
-        photoDataUri, 
-        mealDescription, 
-        estimationType: selectedEstimationType 
+      const result = await estimateCaloriesMacros({
+        photoDataUri,
+        mealDescription,
+        estimationType: selectedEstimationType,
       });
-      setEstimation(result); 
+      setEstimation(result);
       if (result.isMealDetected && result.recognizedItems) {
         setLoggedRecognizedItems(result.recognizedItems);
       } else {
@@ -84,20 +128,44 @@ export default function AddMealPage() {
       }
 
       if (!result.isMealDetected) {
-        toast({ variant: 'destructive', title: 'Meal Not Detected', icon: <AlertTriangle className="h-5 w-5" />, description: 'The AI could not detect a meal in the photo. Please try a different image or add a description.' });
+        toast({
+          variant: "destructive",
+          title: "Meal Not Detected",
+          icon: <AlertTriangle className="h-5 w-5" />,
+          description:
+            "The AI could not detect a meal in the photo. Please try a different image or add a description.",
+        });
       } else if (
-        (selectedEstimationType === 'calories_macros' && (result.estimatedCalories == null || result.macroBreakdown == null)) ||
-        (selectedEstimationType === 'calories_only' && result.estimatedCalories == null) ||
-        (selectedEstimationType === 'macros_only' && result.macroBreakdown == null)
+        (selectedEstimationType === "calories_macros" &&
+          (result.estimatedCalories == null ||
+            result.macroBreakdown == null)) ||
+        (selectedEstimationType === "calories_only" &&
+          result.estimatedCalories == null) ||
+        (selectedEstimationType === "macros_only" &&
+          result.macroBreakdown == null)
       ) {
-        toast({ variant: 'destructive', title: 'Estimation Incomplete', icon: <AlertTriangle className="h-5 w-5" />, description: 'The AI detected a meal but could not provide full estimates for the selected type.' });
+        toast({
+          variant: "destructive",
+          title: "Estimation Incomplete",
+          icon: <AlertTriangle className="h-5 w-5" />,
+          description:
+            "The AI detected a meal but could not provide full estimates for the selected type.",
+        });
       } else {
-         toast({ title: 'Estimation Complete', description: 'Nutritional values have been estimated.' });
+        toast({
+          title: "Estimation Complete",
+          description: "Nutritional values have been estimated.",
+        });
       }
     } catch (error: any) {
-      console.error('Error estimating nutrition:', error);
-      toast({ variant: 'destructive', title: 'Estimation Failed', description: error.message || 'Could not estimate nutrition. Please try again.' });
-      setEstimation(null); 
+      console.error("Error estimating nutrition:", error);
+      toast({
+        variant: "destructive",
+        title: "Estimation Failed",
+        description:
+          error.message || "Could not estimate nutrition. Please try again.",
+      });
+      setEstimation(null);
       setDescriptionUsedInLastEstimate(null);
       setLoggedRecognizedItems(null);
     } finally {
@@ -107,90 +175,127 @@ export default function AddMealPage() {
 
   useEffect(() => {
     if (estimation && estimation.isMealDetected) {
-      if (selectedEstimationType === 'calories_macros' || selectedEstimationType === 'calories_only') {
-        setManualCalories(estimation.estimatedCalories?.toFixed(0) ?? '');
+      if (
+        selectedEstimationType === "calories_macros" ||
+        selectedEstimationType === "calories_only"
+      ) {
+        setManualCalories(estimation.estimatedCalories?.toFixed(0) ?? "");
       } else {
-        setManualCalories('');
+        setManualCalories("");
       }
-      if (selectedEstimationType === 'calories_macros' || selectedEstimationType === 'macros_only') {
-        setManualProtein(estimation.macroBreakdown?.protein?.toFixed(1) ?? '');
-        setManualCarbs(estimation.macroBreakdown?.carbs?.toFixed(1) ?? '');
-        setManualFat(estimation.macroBreakdown?.fat?.toFixed(1) ?? '');
+      if (
+        selectedEstimationType === "calories_macros" ||
+        selectedEstimationType === "macros_only"
+      ) {
+        setManualProtein(estimation.macroBreakdown?.protein?.toFixed(1) ?? "");
+        setManualCarbs(estimation.macroBreakdown?.carbs?.toFixed(1) ?? "");
+        setManualFat(estimation.macroBreakdown?.fat?.toFixed(1) ?? "");
       } else {
-        setManualProtein('');
-        setManualCarbs('');
-        setManualFat('');
+        setManualProtein("");
+        setManualCarbs("");
+        setManualFat("");
       }
       setLoggedRecognizedItems(estimation.recognizedItems ?? null);
     } else if (estimation && !estimation.isMealDetected) {
-        setManualCalories('');
-        setManualProtein('');
-        setManualCarbs('');
-        setManualFat('');
-        setLoggedRecognizedItems(null);
-    } else if (!estimation) { // When photo is removed or estimation is reset
-        setManualCalories('');
-        setManualProtein('');
-        setManualCarbs('');
-        setManualFat('');
-        setLoggedRecognizedItems(null);
+      setManualCalories("");
+      setManualProtein("");
+      setManualCarbs("");
+      setManualFat("");
+      setLoggedRecognizedItems(null);
+    } else if (!estimation) {
+      // When photo is removed or estimation is reset
+      setManualCalories("");
+      setManualProtein("");
+      setManualCarbs("");
+      setManualFat("");
+      setLoggedRecognizedItems(null);
     }
   }, [estimation, selectedEstimationType]);
 
-
   const getTimestamp = () => {
     if (!selectedDate || !selectedTime) return Date.now();
-    const [hours, minutes] = selectedTime.split(':').map(Number);
+    const [hours, minutes] = selectedTime.split(":").map(Number);
     const combinedDate = new Date(selectedDate);
     combinedDate.setHours(hours, minutes, 0, 0);
     return combinedDate.getTime();
   };
 
-  const isValidNumberString = (val: string) => val.trim() !== '' && !isNaN(parseFloat(val)) && parseFloat(val) >= 0;
+  const isValidNumberString = (val: string) =>
+    val.trim() !== "" &&
+    !isNaN(Number.parseFloat(val)) &&
+    Number.parseFloat(val) >= 0;
 
   const canLogMeal = () => {
-    if (!photoDataUri || !selectedMealType || !selectedDate || !selectedTime) return false;
+    if (!photoDataUri || !selectedMealType || !selectedDate || !selectedTime)
+      return false;
 
-    if (selectedEstimationType === 'calories_macros') {
-      return isValidNumberString(manualCalories) && isValidNumberString(manualProtein) && isValidNumberString(manualCarbs) && isValidNumberString(manualFat);
+    if (selectedEstimationType === "calories_macros") {
+      return (
+        isValidNumberString(manualCalories) &&
+        isValidNumberString(manualProtein) &&
+        isValidNumberString(manualCarbs) &&
+        isValidNumberString(manualFat)
+      );
     }
-    if (selectedEstimationType === 'calories_only') {
+    if (selectedEstimationType === "calories_only") {
       return isValidNumberString(manualCalories);
     }
-    if (selectedEstimationType === 'macros_only') {
-      return isValidNumberString(manualProtein) && isValidNumberString(manualCarbs) && isValidNumberString(manualFat);
+    if (selectedEstimationType === "macros_only") {
+      return (
+        isValidNumberString(manualProtein) &&
+        isValidNumberString(manualCarbs) &&
+        isValidNumberString(manualFat)
+      );
     }
-    return false; 
+    return false;
   };
-  
+
   const handleLogMeal = () => {
-    if (!canLogMeal()) { 
-      toast({ variant: 'destructive', title: 'Cannot Log Meal', description: 'Please ensure photo, meal type, date/time are set, and all required nutritional fields for the selected estimation type are filled with valid numbers.' });
+    if (!canLogMeal()) {
+      toast({
+        variant: "destructive",
+        title: "Cannot Log Meal",
+        description:
+          "Please ensure photo, meal type, date/time are set, and all required nutritional fields for the selected estimation type are filled with valid numbers.",
+      });
       return;
     }
-    
+
     addMeal({
       timestamp: getTimestamp(),
-      photoDataUri: photoDataUri as string, 
-      estimatedCalories: isValidNumberString(manualCalories) ? parseFloat(manualCalories) : null, 
-      protein: isValidNumberString(manualProtein) ? parseFloat(manualProtein) : null,
-      carbs: isValidNumberString(manualCarbs) ? parseFloat(manualCarbs) : null,
-      fat: isValidNumberString(manualFat) ? parseFloat(manualFat) : null,
-      mealType: selectedMealType as Meal['mealType'],
+      photoDataUri: photoDataUri as string,
+      estimatedCalories: isValidNumberString(manualCalories)
+        ? Number.parseFloat(manualCalories)
+        : null,
+      protein: isValidNumberString(manualProtein)
+        ? Number.parseFloat(manualProtein)
+        : null,
+      carbs: isValidNumberString(manualCarbs)
+        ? Number.parseFloat(manualCarbs)
+        : null,
+      fat: isValidNumberString(manualFat) ? Number.parseFloat(manualFat) : null,
+      mealType: selectedMealType as Meal["mealType"],
       notes: notes,
       recognizedItems: loggedRecognizedItems,
     });
-    toast({ title: 'Meal Logged!', description: 'Your meal has been added to your log.' });
-    router.push('/dashboard');
+    toast({
+      title: "Meal Logged!",
+      description: "Your meal has been added to your log.",
+    });
+    router.push("/dashboard");
   };
-  
+
   return (
     <AppLayout>
       <div className="container mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="space-y-10">
           <div className="text-center">
-            <h1 className="font-headline text-3xl font-bold text-foreground">Add New Meal</h1>
-            <p className="text-muted-foreground">Capture your meal, get estimates, and log it.</p>
+            <h1 className="font-headline text-3xl font-bold text-foreground">
+              Add New Meal
+            </h1>
+            <p className="text-muted-foreground">
+              Capture your meal, get estimates, and log it.
+            </p>
           </div>
 
           <MealCapture onPhotoCaptured={handlePhotoCaptured} />
@@ -199,11 +304,16 @@ export default function AddMealPage() {
             <Card className="shadow-md">
               <CardHeader>
                 <CardTitle>AI Estimation Tools</CardTitle>
-                <CardDescription>Use AI to get a nutritional estimate, then adjust if needed.</CardDescription>
+                <CardDescription>
+                  Use AI to get a nutritional estimate, then adjust if needed.
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div>
-                  <Label htmlFor="mealDescription" className="text-md font-medium">
+                  <Label
+                    htmlFor="mealDescription"
+                    className="text-md font-medium"
+                  >
                     Meal Description (Optional, for AI accuracy)
                   </Label>
                   <Textarea
@@ -216,16 +326,25 @@ export default function AddMealPage() {
                   <Alert variant="default" className="mt-3">
                     <Info className="h-4 w-4" />
                     <AlertDescription>
-                      Providing details like ingredients, cooking methods, or portion sizes can significantly improve the accuracy of the AI estimation.
+                      Providing details like ingredients, cooking methods, or
+                      portion sizes can significantly improve the accuracy of
+                      the AI estimation.
                     </AlertDescription>
                   </Alert>
                 </div>
 
                 <div>
-                  <Label htmlFor="estimationType" className="text-md font-medium">Estimation Type</Label>
+                  <Label
+                    htmlFor="estimationType"
+                    className="text-md font-medium"
+                  >
+                    Estimation Type
+                  </Label>
                   <Select
                     value={selectedEstimationType}
-                    onValueChange={(value) => setSelectedEstimationType(value as EstimationType)}
+                    onValueChange={(value) =>
+                      setSelectedEstimationType(value as EstimationType)
+                    }
                   >
                     <SelectTrigger id="estimationType" className="mt-2">
                       <SelectValue placeholder="Select estimation type" />
@@ -241,7 +360,12 @@ export default function AddMealPage() {
                 </div>
 
                 <div className="text-center">
-                  <Button onClick={handleEstimate} disabled={isLoading || !photoDataUri} size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground">
+                  <Button
+                    onClick={handleEstimate}
+                    disabled={isLoading || !photoDataUri}
+                    size="lg"
+                    className="bg-accent hover:bg-accent/90 text-accent-foreground"
+                  >
                     {isLoading ? (
                       <>
                         <Loader2 className="mr-2 h-5 w-5 animate-spin" />
@@ -259,21 +383,24 @@ export default function AddMealPage() {
             </Card>
           )}
 
-          <MealEstimation 
-            estimation={estimation} 
-            isLoading={isLoading} 
-            descriptionUsedForEstimation={descriptionUsedInLastEstimate} 
+          <MealEstimation
+            estimation={estimation}
+            isLoading={isLoading}
+            descriptionUsedForEstimation={descriptionUsedInLastEstimate}
             estimationType={selectedEstimationType}
           />
-          
-          {photoDataUri && ( 
+
+          {photoDataUri && (
             <Card className="shadow-md">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                    <Edit3 className="h-6 w-6 text-primary" />
-                    Log Meal Details
+                  <Edit3 className="h-6 w-6 text-primary" />
+                  Log Meal Details
                 </CardTitle>
-                <CardDescription>Verify or enter the nutritional information and details for your meal log.</CardDescription>
+                <CardDescription>
+                  Verify or enter the nutritional information and details for
+                  your meal log.
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -285,11 +412,15 @@ export default function AddMealPage() {
                           variant={"outline"}
                           className={cn(
                             "w-full justify-start text-left font-normal mt-2",
-                            !selectedDate && "text-muted-foreground"
+                            !selectedDate && "text-muted-foreground",
                           )}
                         >
                           <CalendarIcon className="mr-2 h-4 w-4" />
-                          {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
+                          {selectedDate ? (
+                            format(selectedDate, "PPP")
+                          ) : (
+                            <span>Pick a date</span>
+                          )}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
@@ -316,7 +447,9 @@ export default function AddMealPage() {
                 <div>
                   <Label htmlFor="mealType">Meal Type</Label>
                   <Select
-                    onValueChange={(value) => setSelectedMealType(value as Meal['mealType'])}
+                    onValueChange={(value) =>
+                      setSelectedMealType(value as Meal["mealType"])
+                    }
                     value={selectedMealType}
                   >
                     <SelectTrigger id="mealType" className="mt-2">
@@ -339,12 +472,18 @@ export default function AddMealPage() {
                     onCheckedChange={setShowManualInputs}
                     aria-label="Toggle manual nutrition inputs"
                   />
-                  <Label htmlFor="toggle-manual-inputs" className="text-md cursor-pointer">Manually Adjust Nutrition</Label>
+                  <Label
+                    htmlFor="toggle-manual-inputs"
+                    className="text-md cursor-pointer"
+                  >
+                    Manually Adjust Nutrition
+                  </Label>
                 </div>
 
                 {showManualInputs && (
                   <>
-                    {(selectedEstimationType === 'calories_macros' || selectedEstimationType === 'calories_only') && (
+                    {(selectedEstimationType === "calories_macros" ||
+                      selectedEstimationType === "calories_only") && (
                       <div>
                         <Label htmlFor="manualCalories">Calories (kcal)</Label>
                         <Input
@@ -358,7 +497,8 @@ export default function AddMealPage() {
                         />
                       </div>
                     )}
-                    {(selectedEstimationType === 'calories_macros' || selectedEstimationType === 'macros_only') && (
+                    {(selectedEstimationType === "calories_macros" ||
+                      selectedEstimationType === "macros_only") && (
                       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                         <div>
                           <Label htmlFor="manualProtein">Protein (g)</Label>
@@ -403,7 +543,7 @@ export default function AddMealPage() {
                     )}
                   </>
                 )}
-                 {loggedRecognizedItems && loggedRecognizedItems.length > 0 && (
+                {loggedRecognizedItems && loggedRecognizedItems.length > 0 && (
                   <div className="space-y-2">
                     <Label className="text-md flex items-center">
                       <ListTree className="mr-2 h-4 w-4 text-primary" />
@@ -429,7 +569,12 @@ export default function AddMealPage() {
                     className="mt-2 min-h-[100px]"
                   />
                 </div>
-                <Button onClick={handleLogMeal} size="lg" className="w-full" disabled={!canLogMeal()}>
+                <Button
+                  onClick={handleLogMeal}
+                  size="lg"
+                  className="w-full"
+                  disabled={!canLogMeal()}
+                >
                   <CheckCircle className="mr-2 h-5 w-5" />
                   Log This Meal
                 </Button>

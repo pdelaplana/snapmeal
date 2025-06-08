@@ -1,14 +1,13 @@
-
 "use client";
 
-import { useState, useEffect } from 'react';
 import AppLayout from "@/components/layout/app-layout";
 import MealLogList from "@/components/meal/meal-log-list";
 import { Button } from "@/components/ui/button";
+import { useMealLog } from "@/context/meal-log-context";
+import { isToday } from "date-fns";
+import { LineChart, PlusCircle } from "lucide-react"; // Added LineChart
 import Link from "next/link";
-import { PlusCircle, LineChart } from "lucide-react"; // Added LineChart
-import { useMealLog } from '@/context/meal-log-context';
-import { isToday } from 'date-fns';
+import { useEffect, useState } from "react";
 
 export default function DashboardPage() {
   const { meals, loading } = useMealLog();
@@ -23,7 +22,9 @@ export default function DashboardPage() {
     if (meals.length === 0) {
       setShowMainAddButton(false);
     } else {
-      const hasMealsToday = meals.some(meal => isToday(new Date(meal.timestamp)));
+      const hasMealsToday = meals.some((meal) =>
+        isToday(new Date(meal.timestamp)),
+      );
       setShowMainAddButton(hasMealsToday);
     }
   }, [meals, loading]);
