@@ -3,6 +3,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/context/auth-context';
 import { MealLogProvider } from '@/context/meal-log-context';
+import { Providers } from '@/components/providers'; // New import
 
 export const metadata: Metadata = {
   title: 'SnapMeal',
@@ -24,12 +25,14 @@ export default function RootLayout({
         <link rel="icon" href="/favicon.ico" sizes="any" />
       </head>
       <body className="font-body antialiased">
-        <AuthProvider>
-          <MealLogProvider>
-            {children}
-            <Toaster />
-          </MealLogProvider>
-        </AuthProvider>
+        <Providers> {/* Wrap with React Query Provider */}
+          <AuthProvider>
+            <MealLogProvider>
+              {children}
+              <Toaster />
+            </MealLogProvider>
+          </AuthProvider>
+        </Providers>
       </body>
     </html>
   );

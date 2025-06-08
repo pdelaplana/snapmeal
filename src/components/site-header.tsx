@@ -15,18 +15,26 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"; // AvatarImage removed as we don't have profile photo URL yet
+import { signOutUser } from "@/actions/auth"; // Import server action for signout
+import { config } from "@/lib/config"; // Import config for feature flags
 
 export default function SiteHeader() {
-  const { user, mockSignOut } = useAuth();
+  const { user } = useAuth(); // No longer using mockSignOut from here
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
 
   const handleSignOut = async () => {
-    mockSignOut();
-    toast({ title: "Logged Out", description: "You have been successfully logged out." });
-    router.push("/login");
+    const result = await signOutUser(); // Call the server action
+    if (result.success) {
+      toast({ title: "Logged Out", description: "You have been successfully logged out." });
+      // onAuthStateChanged in AuthContext will handle user state update and redirect if necessary
+      // but an explicit push can be faster for UI.
+      router.push("/login"); 
+    } else {
+      toast({ variant: "destructive", title: "Logout Failed", description: result.message || "Could not log out."});
+    }
   };
 
   const handleBack = () => {
@@ -57,8 +65,7 @@ export default function SiteHeader() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="flex items-center gap-2 px-2 py-1 h-auto sm:px-3">
                   <Avatar className="h-7 w-7 sm:h-8 sm:w-8">
-                    {/* Placeholder for user avatar image if available */}
-                    {/* <AvatarImage src="https://github.com/shadcn.png" alt="@shadcn" /> */}
+                    {/* <AvatarImage src={user.photoURL || undefined} alt={user.displayName || user.email || "User"} /> */}
                     <AvatarFallback className="bg-primary text-primary-foreground text-xs sm:text-sm">
                       {userInitial}
                     </AvatarFallback>
@@ -78,12 +85,14 @@ export default function SiteHeader() {
                     <span>Profile</span>
                   </DropdownMenuItem>
                 </Link>
-                <Link href="/sharing" passHref>
-                  <DropdownMenuItem>
-                    <Users className="mr-2 h-4 w-4" />
-                    <span>Manage Sharing</span>
-                  </DropdownMenuItem>
-                </Link>
+                {config.features.enableSharing && (
+                  <Link href="/sharing" passHref>
+                    <DropdownMenuItem>
+                      <Users className="mr-2 h-4 w-4" />
+                      <span>Manage Sharing</span>
+                    </DropdownMenuItem>
+                  </Link>
+                )}
                 <Link href="/account" passHref>
                   <DropdownMenuItem>
                     <Settings2 className="mr-2 h-4 w-4" />

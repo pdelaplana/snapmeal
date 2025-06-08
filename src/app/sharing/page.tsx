@@ -8,14 +8,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
-import { Users, Send, Trash2, Eye, ChevronRight } from "lucide-react";
+import { Users, Send, Trash2, Eye, ChevronRight, Construction } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import type { Meal } from "@/types";
+import { config } from "@/lib/config"; // Import config for feature flags
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 const PROFILE_SHARED_EMAILS_KEY = 'snapmeal_shared_emails';
-const LOGS_SHARED_WITH_ME_KEY = 'snapmeal_logs_shared_with_me_by_emails'; // Key for who shared with current user
+// const LOGS_SHARED_WITH_ME_KEY = 'snapmeal_logs_shared_with_me_by_emails'; // Key for who shared with current user
 
 // Mock sharer data
 const MOCK_SHARERS = [
@@ -63,6 +65,8 @@ export default function SharingPage() {
   const [logsSharedWithMe, setLogsSharedWithMe] = useState<typeof MOCK_SHARERS>([]);
 
   useEffect(() => {
+    if (!config.features.enableSharing) return;
+
     const storedSharedEmails = localStorage.getItem(PROFILE_SHARED_EMAILS_KEY);
     if (storedSharedEmails) {
       try {
@@ -73,7 +77,6 @@ export default function SharingPage() {
       }
     }
 
-    // Simulate fetching list of who shared with current user & pre-populate their data if needed
     setLogsSharedWithMe(MOCK_SHARERS); 
     MOCK_SHARERS.forEach(sharer => {
       if (!localStorage.getItem(sharer.mealStorageKey)) {
@@ -130,6 +133,28 @@ export default function SharingPage() {
 
   if (!user) {
     return <AppLayout><p>Loading user data...</p></AppLayout>;
+  }
+
+  if (!config.features.enableSharing) {
+    return (
+      <AppLayout>
+        <div className="container mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8 text-center">
+          <Card className="shadow-md">
+            <CardHeader>
+              <CardTitle className="flex items-center justify-center text-xl">
+                <Construction className="mr-3 h-8 w-8 text-primary" />
+                Sharing Feature Not Available
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">
+                The meal log sharing functionality is currently under development and not available.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </AppLayout>
+    );
   }
 
   return (
