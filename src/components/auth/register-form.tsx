@@ -22,10 +22,9 @@ function SubmitButton() {
   );
 }
 
-// Define the expected shape of the state from registerUser action
 interface RegisterFormState {
   success: boolean;
-  email?: string; 
+  email?: string;
   error?: {
     email?: string[];
     password?: string[];
@@ -36,24 +35,21 @@ interface RegisterFormState {
 export default function RegisterForm() {
   const router = useRouter();
   const { toast } = useToast();
-  const { mockLogin, user: loggedInUserFromContext } = useAuth();
+  const { user: loggedInUserFromContext } = useAuth(); // Removed mockLogin
   const [state, formAction] = useActionState<RegisterFormState | undefined, FormData>(registerUser, undefined);
 
   useEffect(() => {
     if (state?.success && state.email) {
-      toast({ title: "Registration Successful (Mocked)", description: `Welcome, ${state.email}! You are now logged in.` });
-      mockLogin(state.email);
-      // Navigation is handled in the effect below
+      toast({ title: "Registration Successful", description: `Welcome, ${state.email}! You are now logged in.` });
+      // mockLogin was removed, onAuthStateChanged will handle user state update
     } else if (state?.error) {
       const errorMessages = Object.values(state.error).flat().join(", ");
-      toast({ variant: "destructive", title: "Registration Failed (Mocked)", description: errorMessages });
+      toast({ variant: "destructive", title: "Registration Failed", description: errorMessages });
     }
-  }, [state, toast, mockLogin]);
+  }, [state, toast]); // Removed mockLogin from dependencies
 
-  // Effect to handle navigation once the user is set in context after a successful action
   useEffect(() => {
     if (state?.success && state.email && loggedInUserFromContext?.email === state.email) {
-      // Check if the action was successful AND the context user matches the email from the action
       router.push("/dashboard");
     }
   }, [state, loggedInUserFromContext, router]);

@@ -19,19 +19,27 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { signOutUser } from "@/actions/auth"; // Import server action
 
 export default function AccountManagementPage() {
-  const { user, mockSignOut } = useAuth();
+  const { user } = useAuth(); // Removed mockSignOut
   const router = useRouter();
   const { toast } = useToast();
 
   const handleSignOut = async () => {
-    mockSignOut();
-    toast({ title: "Logged Out", description: "You have been successfully logged out." });
-    router.push("/login"); 
+    const result = await signOutUser(); // Call the server action
+    if (result.success) {
+      toast({ title: "Logged Out", description: "You have been successfully logged out." });
+      // onAuthStateChanged in AuthContext will handle user state update and redirect if necessary
+      // but an explicit push can be faster for UI.
+      router.push("/login"); 
+    } else {
+      toast({ variant: "destructive", title: "Logout Failed", description: result.message || "Could not log out."});
+    }
   };
 
   if (!user) {
+    // This check might be redundant if AppLayout already handles it, but good for safety.
     return <AppLayout><p>Loading user data...</p></AppLayout>; 
   }
 
@@ -111,15 +119,3 @@ export default function AccountManagementPage() {
     </AppLayout>
   );
 }
-
-// Extend Card and Button variants for mock display if needed, or handle styling directly.
-// For simplicity, using standard variants with disabled state.
-// Adding custom variants to ui/card.tsx and ui/button.tsx for destructive_outline_mock and outlined_warning would be the ShadCN way.
-// For now, specific styling might be inline or rely on Tailwind class adjustments if these variants don't exist.
-// Let's assume `variant="destructive_outline_mock"` and `variant="outlined_warning"` would need defining in their respective component files.
-// Since I can't edit those now, I'll leave them as-is or use closest existing.
-// For Button:
-// <Button variant="outline" className="w-full justify-start border-destructive/50 text-destructive hover:bg-destructive/10" disabled>
-
-// For Card: (This is harder without modifying card.tsx)
-// I'll use a standard Card and style its content
