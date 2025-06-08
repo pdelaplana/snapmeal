@@ -26,22 +26,23 @@ export function MealLogProvider({ children }: { children: ReactNode }) {
     try {
       const storedMeals = localStorage.getItem(MEAL_LOG_STORAGE_KEY);
       if (storedMeals) {
-        // Ensure recognizedItems defaults to null if not present for older items
         const parsedMeals = JSON.parse(storedMeals).map((meal: any) => ({
           ...meal,
           recognizedItems: meal.recognizedItems ?? null,
         }));
-        setMeals(parsedMeals);
+        // Sort meals when loading from localStorage
+        setMeals(parsedMeals.sort((a: Meal, b: Meal) => b.timestamp - a.timestamp));
       }
     } catch (error) {
       console.error("Failed to load meals from local storage", error);
     }
     setLoading(false);
-  }, []);
+  }, []); // Empty dependency array ensures this runs once on mount
 
   useEffect(() => {
     if (!loading) {
       try {
+        // Meals should already be sorted when they get here
         localStorage.setItem(MEAL_LOG_STORAGE_KEY, JSON.stringify(meals));
       } catch (error) {
         console.error("Failed to save meals to local storage", error);
@@ -53,9 +54,11 @@ export function MealLogProvider({ children }: { children: ReactNode }) {
     const newMealWithId: Meal = {
       ...newMealData,
       id: crypto.randomUUID(),
-      recognizedItems: newMealData.recognizedItems ?? null, // Ensure it's part of the new meal
+      recognizedItems: newMealData.recognizedItems ?? null,
     };
-    setMeals(prevMeals => [newMealWithId, ...prevMeals].sort((a, b) => b.timestamp - a.timestamp));
+    setMeals(prevMeals => 
+      [...prevMeals, newMealWithId].sort((a, b) => b.timestamp - a.timestamp)
+    );
   }, []);
 
   const updateMeal = useCallback((mealId: string, updatedMealData: Omit<Meal, 'id'>) => {
@@ -68,21 +71,15 @@ export function MealLogProvider({ children }: { children: ReactNode }) {
 
   const deleteMeal = useCallback((mealId: string) => {
     setMeals(prevMeals => prevMeals.filter(meal => meal.id !== mealId));
+    // No need to re-sort here as filter preserves order and original list was sorted
   }, []);
 
   const getMealById = useCallback((id: string): Meal | undefined => {
     return meals.find(meal => meal.id === id);
   }, [meals]);
   
-  useEffect(() => {
-    if (meals.length > 0) {
-      const sortedMeals = [...meals].sort((a, b) => b.timestamp - a.timestamp);
-      if (JSON.stringify(sortedMeals) !== JSON.stringify(meals)) {
-        setMeals(sortedMeals);
-      }
-    }
-  }, [meals]);
-
+  // Removed the problematic useEffect that was causing re-render loops.
+  // Sorting is now handled directly within addMeal, updateMeal, and initial load.
 
   return (
     <MealLogContext.Provider value={{ meals, addMeal, updateMeal, deleteMeal, getMealById, loading }}>
