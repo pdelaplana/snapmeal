@@ -1,16 +1,9 @@
-"use client";
+'use client';
 
-import { auth } from "@/lib/firebase";
-import type { User } from "firebase/auth"; // Using Firebase User type directly
-import { onAuthStateChanged } from "firebase/auth";
-import {
-  type ReactNode,
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { auth } from '@/lib/firebase';
+import type { User } from 'firebase/auth'; // Using Firebase User type directly
+import { onAuthStateChanged } from 'firebase/auth';
+import { type ReactNode, createContext, useContext, useEffect, useMemo, useState } from 'react';
 
 interface AuthContextType {
   user: User | null; // User can be Firebase User or null
@@ -27,13 +20,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
       setLoading(false);
-      console.log(
-        "AuthContext: Auth state changed, user:",
-        firebaseUser?.email,
-      );
+      console.log('AuthContext: Auth state changed, user:', firebaseUser?.email);
     });
 
     return () => unsubscribe(); // Cleanup subscription on unmount
@@ -47,15 +37,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [user, loading],
   );
 
-  return (
-    <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;
 }
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context; // Return only the stable context value
 };

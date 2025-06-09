@@ -1,4 +1,4 @@
-"use server";
+'use server';
 
 /**
  * @fileOverview AI agent that estimates the calorie count and macro breakdown of a meal from a photo and an optional description.
@@ -9,9 +9,9 @@
  * - EstimateCaloriesMacrosOutput - The return type for the estimateCaloriesMacros function.
  */
 
-import { ai } from "@/ai/genkit";
-import type { EstimationType } from "@/types";
-import { z } from "genkit";
+import { ai } from '@/ai/genkit';
+import type { EstimationType } from '@/types';
+import { z } from 'genkit';
 
 const EstimateCaloriesMacrosInputSchema = z.object({
   photoDataUri: z
@@ -22,59 +22,45 @@ const EstimateCaloriesMacrosInputSchema = z.object({
   mealDescription: z
     .string()
     .optional()
-    .describe(
-      "An optional user-provided description of the meal to improve estimation accuracy.",
-    ),
+    .describe('An optional user-provided description of the meal to improve estimation accuracy.'),
   estimationType: z
-    .enum(["calories_macros", "calories_only", "macros_only"])
-    .default("calories_macros" as EstimationType)
+    .enum(['calories_macros', 'calories_only', 'macros_only'])
+    .default('calories_macros' as EstimationType)
     .describe(
-      "Specifies what to estimate: both calories and macros, only calories, or only macros.",
+      'Specifies what to estimate: both calories and macros, only calories, or only macros.',
     ),
 });
-export type EstimateCaloriesMacrosInput = z.infer<
-  typeof EstimateCaloriesMacrosInputSchema
->;
+export type EstimateCaloriesMacrosInput = z.infer<typeof EstimateCaloriesMacrosInputSchema>;
 
 const EstimateCaloriesMacrosOutputSchema = z.object({
-  isMealDetected: z
-    .boolean()
-    .describe("Whether a meal was detected in the photo."),
+  isMealDetected: z.boolean().describe('Whether a meal was detected in the photo.'),
   estimatedCalories: z
     .number()
     .optional()
     .nullable()
     .describe(
-      "The estimated calorie count of the meal. Provided if requested and a meal is detected, otherwise null.",
+      'The estimated calorie count of the meal. Provided if requested and a meal is detected, otherwise null.',
     ),
   macroBreakdown: z
     .object({
-      protein: z
-        .number()
-        .describe("The estimated protein content of the meal in grams."),
-      carbs: z
-        .number()
-        .describe("The estimated carbohydrate content of the meal in grams."),
-      fat: z
-        .number()
-        .describe("The estimated fat content of the meal in grams."),
+      protein: z.number().describe('The estimated protein content of the meal in grams.'),
+      carbs: z.number().describe('The estimated carbohydrate content of the meal in grams.'),
+      fat: z.number().describe('The estimated fat content of the meal in grams.'),
     })
     .optional()
     .nullable()
     .describe(
-      "The estimated macro breakdown of the meal. Provided if requested and a meal is detected, otherwise null.",
+      'The estimated macro breakdown of the meal. Provided if requested and a meal is detected, otherwise null.',
     ),
   recognizedItems: z
     .array(z.string())
     .optional()
     .nullable()
     .describe(
-      "A list of distinct food items or ingredients recognized in the meal, or null if none identified or no meal detected.",
+      'A list of distinct food items or ingredients recognized in the meal, or null if none identified or no meal detected.',
     ),
 });
-export type EstimateCaloriesMacrosOutput = z.infer<
-  typeof EstimateCaloriesMacrosOutputSchema
->;
+export type EstimateCaloriesMacrosOutput = z.infer<typeof EstimateCaloriesMacrosOutputSchema>;
 
 export async function estimateCaloriesMacros(
   input: EstimateCaloriesMacrosInput,
@@ -83,7 +69,7 @@ export async function estimateCaloriesMacros(
 }
 
 const estimateCaloriesMacrosPrompt = ai.definePrompt({
-  name: "estimateCaloriesMacrosPrompt",
+  name: 'estimateCaloriesMacrosPrompt',
   input: { schema: EstimateCaloriesMacrosInputSchema },
   output: { schema: EstimateCaloriesMacrosOutputSchema },
   prompt: `You are a nutrition expert. Your first task is to determine if the provided photo clearly shows a meal.
@@ -120,79 +106,71 @@ Examples:
 
 const estimateCaloriesMacrosFlow = ai.defineFlow(
   {
-    name: "estimateCaloriesMacrosFlow",
+    name: 'estimateCaloriesMacrosFlow',
     inputSchema: EstimateCaloriesMacrosInputSchema,
     outputSchema: EstimateCaloriesMacrosOutputSchema,
   },
-  async (
-    input: EstimateCaloriesMacrosInput,
-  ): Promise<EstimateCaloriesMacrosOutput> => {
+  async (input: EstimateCaloriesMacrosInput): Promise<EstimateCaloriesMacrosOutput> => {
     try {
       const flowInput = {
         ...input,
-        estimationType: input.estimationType || "calories_macros",
+        estimationType: input.estimationType || 'calories_macros',
       };
 
       const response = await estimateCaloriesMacrosPrompt(flowInput);
 
       if (response.error) {
         console.error(
-          "Error from AI model with input:",
+          'Error from AI model with input:',
           JSON.stringify(flowInput),
-          "Error:",
+          'Error:',
           response.error,
         );
         throw new Error(
-          `AI model failed to generate a response: ${String(response.error.message || response.error || "Reason unknown")}`,
+          `AI model failed to generate a response: ${String(response.error.message || response.error || 'Reason unknown')}`,
         );
       }
 
       if (!response.output) {
         console.error(
-          "AI model returned no output and no error. Input:",
+          'AI model returned no output and no error. Input:',
           JSON.stringify(flowInput),
-          "Raw response candidates:",
+          'Raw response candidates:',
           response.candidates,
         );
         throw new Error(
-          "AI model returned no valid output. This might be due to content filtering or an issue with the prompt response format.",
+          'AI model returned no valid output. This might be due to content filtering or an issue with the prompt response format.',
         );
       }
 
       const { output } = response;
-      if (
-        flowInput.estimationType === "calories_only" &&
-        output.macroBreakdown !== null
-      ) {
+      if (flowInput.estimationType === 'calories_only' && output.macroBreakdown !== null) {
         console.warn(
-          "AI returned macros when only calories were requested. Correcting. Output:",
+          'AI returned macros when only calories were requested. Correcting. Output:',
           output,
         );
         output.macroBreakdown = null;
       }
-      if (
-        flowInput.estimationType === "macros_only" &&
-        output.estimatedCalories !== null
-      ) {
+      if (flowInput.estimationType === 'macros_only' && output.estimatedCalories !== null) {
         console.warn(
-          "AI returned calories when only macros were requested. Correcting. Output:",
+          'AI returned calories when only macros were requested. Correcting. Output:',
           output,
         );
         output.estimatedCalories = null;
       }
       if (
-        flowInput.estimationType === "calories_macros" &&
+        flowInput.estimationType === 'calories_macros' &&
         (output.estimatedCalories === null || output.macroBreakdown === null) &&
         output.isMealDetected
       ) {
         console.warn(
-          "AI failed to return both calories and macros when requested and meal detected. Output:",
+          'AI failed to return both calories and macros when requested and meal detected. Output:',
           output,
         );
       }
       if (!output.isMealDetected && output.recognizedItems !== null) {
         console.warn(
-          "AI returned recognized items when no meal was detected. Correcting. Output:",
+          'AI returned recognized items when no meal was detected. Correcting. Output:',
           output,
         );
         output.recognizedItems = null;
@@ -201,9 +179,9 @@ const estimateCaloriesMacrosFlow = ai.defineFlow(
       return output;
     } catch (flowError: any) {
       console.error(
-        "Critical error in estimateCaloriesMacrosFlow with input:",
+        'Critical error in estimateCaloriesMacrosFlow with input:',
         JSON.stringify(input),
-        "Error:",
+        'Error:',
         flowError,
       );
       // Ensure a valid structure is returned even in critical failure, adhering to schema for nullable fields

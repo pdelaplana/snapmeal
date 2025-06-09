@@ -6,12 +6,12 @@ const getBooleanEnv = (key: string, defaultValue: boolean): boolean => {
   if (value === undefined) {
     return defaultValue;
   }
-  return value === "true";
+  return value === 'true';
 };
 
 export const config = {
   features: {
-    enableSharing: getBooleanEnv("NEXT_PUBLIC_ENABLE_SHARING_FEATURE", false),
+    enableSharing: getBooleanEnv('NEXT_PUBLIC_ENABLE_SHARING_FEATURE', false),
   },
   firebase: {
     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -26,13 +26,9 @@ export const config = {
 };
 
 // Validate essential Firebase config from here as well if desired, or rely on firebase.ts
-if (
-  !config.firebase.apiKey ||
-  !config.firebase.authDomain ||
-  !config.firebase.projectId
-) {
+if (!config.firebase.apiKey || !config.firebase.authDomain || !config.firebase.projectId) {
   console.warn(
-    "Firebase configuration warning from config.ts: Potentially missing API Key, Auth Domain, or Project ID. " +
-      "This might affect Firebase services if not correctly set via environment variables.",
+    'Firebase configuration warning from config.ts: Potentially missing API Key, Auth Domain, or Project ID. ' +
+      'This might affect Firebase services if not correctly set via environment variables.',
   );
 }
