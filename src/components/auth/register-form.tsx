@@ -1,3 +1,4 @@
+
 "use client";
 
 import { registerUser } from "@/actions/auth";
@@ -39,7 +40,7 @@ interface RegisterFormState {
 export default function RegisterForm() {
   const router = useRouter();
   const { toast } = useToast();
-  const { user: loggedInUserFromContext } = useAuth(); // Removed mockLogin
+  const { user: loggedInUserFromContext } = useAuth();
   const [state, formAction] = useActionState<
     RegisterFormState | undefined,
     FormData
@@ -51,6 +52,7 @@ export default function RegisterForm() {
         title: "Registration Successful",
         description: `Welcome, ${state.email}! You are now logged in.`,
       });
+      // Redirection logic is now separate and more robust
     } else if (state?.error) {
       const errorMessages = Object.values(state.error).flat().join(", ");
       toast({
@@ -59,14 +61,13 @@ export default function RegisterForm() {
         description: errorMessages,
       });
     }
-  }, [state, toast]); 
+  }, [state, toast]);
 
   useEffect(() => {
-    if (
-      state?.success &&
-      state.email &&
-      loggedInUserFromContext?.email === state.email
-    ) {
+    // If the server action was successful AND the AuthContext now has a user
+    if (state?.success && loggedInUserFromContext) {
+      // We can assume the loggedInUserFromContext is the one who just registered
+      // because the server action succeeded.
       router.push("/dashboard");
     }
   }, [state, loggedInUserFromContext, router]);

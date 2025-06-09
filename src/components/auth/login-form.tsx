@@ -1,3 +1,4 @@
+
 "use client";
 
 import { loginUser } from "@/actions/auth";
@@ -39,7 +40,7 @@ interface LoginFormState {
 export default function LoginForm() {
   const router = useRouter();
   const { toast } = useToast();
-  const { user: loggedInUserFromContext } = useAuth(); // Removed mockLogin
+  const { user: loggedInUserFromContext } = useAuth();
   const [state, formAction] = useActionState<
     LoginFormState | undefined,
     FormData
@@ -51,7 +52,7 @@ export default function LoginForm() {
         title: "Login Successful",
         description: `Welcome back, ${state.email}!`,
       });
-      // mockLogin was removed, onAuthStateChanged will handle user state update
+      // Redirection logic is now separate and more robust
     } else if (state?.error) {
       const errorMessages = Object.values(state.error).flat().join(", ");
       toast({
@@ -60,14 +61,13 @@ export default function LoginForm() {
         description: errorMessages,
       });
     }
-  }, [state, toast]); // Removed mockLogin from dependencies
+  }, [state, toast]);
 
   useEffect(() => {
-    if (
-      state?.success &&
-      state.email &&
-      loggedInUserFromContext?.email === state.email
-    ) {
+    // If the server action was successful AND the AuthContext now has a user
+    if (state?.success && loggedInUserFromContext) {
+      // We can assume the loggedInUserFromContext is the one who just logged in
+      // because the server action succeeded.
       router.push("/dashboard");
     }
   }, [state, loggedInUserFromContext, router]);
