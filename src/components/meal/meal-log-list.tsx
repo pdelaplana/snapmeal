@@ -1,10 +1,10 @@
 'use client';
 
-import { useSharedLog } from '@/app/view-shared-log/[sharerId]/page'; // Import the context for shared logs
 import { LoadingSpinner } from '@/components/loading-spinner';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useMealLog } from '@/context/meal-log-context';
+import { useSharedLog } from '@/context/shared-log-context'; // Import the context for shared logs
 import type { Meal } from '@/types';
 import { compareDesc, format, isToday, isYesterday, parseISO } from 'date-fns';
 import { PlusCircle } from 'lucide-react';
@@ -18,6 +18,7 @@ export default function MealLogList() {
 
   // Conditionally use the appropriate hook
   const mainLog = useMealLog();
+  // biome-ignore lint/suspicious/noImplicitAnyLet: <explanation>
   let sharedLog;
   try {
     sharedLog = useSharedLog(); // This will throw error if not in SharedLogProvider
@@ -65,7 +66,7 @@ export default function MealLogList() {
   const groupMealsByDay = (mealsToGroup: Meal[]): Record<string, Meal[]> => {
     const grouped = mealsToGroup.reduce(
       (acc, meal) => {
-        const dateKey = format(new Date(meal.timestamp), 'yyyy-MM-dd');
+        const dateKey = format(new Date(meal.date), 'yyyy-MM-dd');
         if (!acc[dateKey]) {
           acc[dateKey] = [];
         }
@@ -97,7 +98,7 @@ export default function MealLogList() {
         {dateKeys.map((dateKey) => {
           const mealsForDay = groupedMeals[dateKey];
           // Ensure meals within the day are also sorted by time, most recent first
-          mealsForDay.sort((a, b) => b.timestamp - a.timestamp);
+          mealsForDay.sort((a, b) => b.date.getTime() - a.date.getTime());
 
           const dayDate = parseISO(dateKey);
 

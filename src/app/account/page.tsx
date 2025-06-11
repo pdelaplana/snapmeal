@@ -1,6 +1,5 @@
 'use client';
 
-import { signOutUser } from '@/actions/auth'; // Import server action
 import AppLayout from '@/components/layout/app-layout';
 import {
   AlertDialog,
@@ -21,13 +20,13 @@ import { Key, LogOut, ShieldAlert, Trash2, UserCog } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export default function AccountManagementPage() {
-  const { user } = useAuth(); // Removed mockSignOut
+  const { user, logout } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
 
-  const handleSignOut = async () => {
-    const result = await signOutUser(); // Call the server action
-    if (result.success) {
+  const logoutHandler = async () => {
+    const result = await logout(); // Call the server action
+    if (result) {
       toast({
         title: 'Logged Out',
         description: 'You have been successfully logged out.',
@@ -39,7 +38,7 @@ export default function AccountManagementPage() {
       toast({
         variant: 'destructive',
         title: 'Logout Failed',
-        description: result.message || 'Could not log out.',
+        description: 'Could not log out.',
       });
     }
   };
@@ -99,7 +98,7 @@ export default function AccountManagementPage() {
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleSignOut}>Sign Out</AlertDialogAction>
+                    <AlertDialogAction onClick={logoutHandler}>Sign Out</AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>

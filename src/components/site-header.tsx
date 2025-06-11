@@ -1,6 +1,5 @@
 'use client';
 
-import { signOutUser } from '@/actions/auth'; // Import server action for signout
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'; // AvatarImage removed as we don't have profile photo URL yet
 import { Button } from '@/components/ui/button';
 import {
@@ -17,16 +16,16 @@ import { config } from '@/lib/config'; // Import config for feature flags
 import { ArrowLeft, ChevronDown, LogOut, Settings2, User, Users, Utensils } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 export default function SiteHeader() {
-  const { user } = useAuth(); // No longer using mockSignOut from here
+  const { user, logout } = useAuth(); // No longer using mockSignOut from here
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
 
   const handleSignOut = async () => {
-    const result = await signOutUser(); // Call the server action
-    if (result.success) {
+    if (await logout()) {
       toast({
         title: 'Logged Out',
         description: 'You have been successfully logged out.',
@@ -38,7 +37,7 @@ export default function SiteHeader() {
       toast({
         variant: 'destructive',
         title: 'Logout Failed',
-        description: result.message || 'Could not log out.',
+        description: 'Could not log out.',
       });
     }
   };

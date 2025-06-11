@@ -82,9 +82,9 @@ export default function MealEstimation({
 
   const { estimatedCalories, macroBreakdown, recognizedItems } = estimation;
 
-  let proteinPercentage = 0,
-    carbsPercentage = 0,
-    fatPercentage = 0;
+  let proteinPercentage = 0;
+  let carbsPercentage = 0;
+  let fatPercentage = 0;
   if (macroBreakdown) {
     const totalMacros =
       (macroBreakdown.protein || 0) + (macroBreakdown.carbs || 0) + (macroBreakdown.fat || 0);
@@ -157,7 +157,7 @@ export default function MealEstimation({
             </div>
             <div className='flex flex-wrap gap-2'>
               {recognizedItems.map((item, index) => (
-                <Badge key={index} variant='secondary' className='text-sm'>
+                <Badge key={item} variant='secondary' className='text-sm'>
                   {item}
                 </Badge>
               ))}

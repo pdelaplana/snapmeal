@@ -19,7 +19,7 @@ export default function MealLogItem({ meal }: MealLogItemProps) {
   if (meal.mealType && meal.mealType.trim() !== '') {
     titleToDisplay = meal.mealType;
   } else {
-    const mealDate = new Date(meal.timestamp);
+    const mealDate = new Date(meal.date);
     const hour = mealDate.getHours();
     if (hour >= 5 && hour < 12) {
       // 5:00 AM - 11:59 AM
@@ -36,7 +36,7 @@ export default function MealLogItem({ meal }: MealLogItemProps) {
     }
   }
 
-  const mealDateTime = new Date(meal.timestamp);
+  const mealDateTime = new Date(meal.date);
   const formattedDate = mealDateTime.toLocaleDateString([], {
     weekday: 'short',
     month: 'short',
@@ -127,7 +127,7 @@ export default function MealLogItem({ meal }: MealLogItemProps) {
           <div className='mb-3 space-y-1'>
             <div className='flex flex-wrap gap-1.5'>
               {meal.recognizedItems.map((item, index) => (
-                <Badge key={index} variant='outline' className='text-xs'>
+                <Badge key={item} variant='outline' className='text-xs'>
                   {item}
                 </Badge>
               ))}

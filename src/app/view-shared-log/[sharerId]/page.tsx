@@ -12,31 +12,6 @@ import { ChevronLeft, Construction } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
 
-interface SharedLogContextValue {
-  meals: Meal[];
-  loading: boolean;
-}
-
-const SharedLogContext = React.createContext<SharedLogContextValue | undefined>(undefined);
-
-export function SharedLogProvider({
-  children,
-  meals,
-  loading,
-}: { children: React.ReactNode; meals: Meal[]; loading: boolean }) {
-  return (
-    <SharedLogContext.Provider value={{ meals, loading }}>{children}</SharedLogContext.Provider>
-  );
-}
-
-export const useSharedLog = () => {
-  const context = React.useContext(SharedLogContext);
-  if (context === undefined) {
-    throw new Error('useSharedLog must be used within a SharedLogProvider');
-  }
-  return context;
-};
-
 export default function ViewSharedLogPage() {
   const params = useParams();
   const router = useRouter();
@@ -64,7 +39,9 @@ export default function ViewSharedLogPage() {
             ...meal,
             recognizedItems: meal.recognizedItems ?? null,
           }));
-          setSharedMeals(parsedMeals.sort((a, b) => b.timestamp - a.timestamp));
+          setSharedMeals(
+            parsedMeals.sort((a, b) => b.date.getUTCMilliseconds() - a.date.getUTCMilliseconds()),
+          );
 
           if (sharerId === 'nutritionist@demo.com') setSharerName('Demo Nutritionist');
           else if (sharerId === 'friend@demo.com') setSharerName('Active Friend');

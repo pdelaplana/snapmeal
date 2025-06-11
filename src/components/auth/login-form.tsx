@@ -9,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Key, Mail } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useActionState, useEffect } from 'react';
+import { type FormEvent, useEffect, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 
 function SubmitButton() {
@@ -24,6 +24,7 @@ function SubmitButton() {
 export interface LoginFormState {
   success: boolean;
   email?: string;
+  pending: boolean;
   error?: {
     email?: string[];
     password?: string[];
@@ -34,11 +35,28 @@ export interface LoginFormState {
 export default function LoginForm() {
   const router = useRouter();
   const { toast } = useToast();
-  const { user: loggedInUserFromContext, loading: auth } = useAuth();
-  const [state, formAction] = useActionState<LoginFormState | undefined, FormData>(
-    loginUser,
-    undefined,
-  );
+  const { user: loggedInUserFromContext, loading, login } = useAuth();
+  const [state, setState] = useState<LoginFormState | undefined>(undefined);
+
+  // Handle form submission using the context login function
+  const loginHandler = async (formData: FormData) => {
+    setState({ ...state, success: false, pending: true });
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
+
+    try {
+      const result = await login(email, password);
+      setState({
+        ...state,
+        success: result.success,
+        email: result.email,
+        pending: false,
+        error: result.error,
+      });
+    } catch (error) {
+    } finally {
+    }
+  };
 
   useEffect(() => {
     if (state?.success && state.email) {
@@ -67,7 +85,7 @@ export default function LoginForm() {
   }, [state, loggedInUserFromContext, router]);
 
   return (
-    <form action={formAction} className='space-y-6'>
+    <form action={loginHandler} className='space-y-6'>
       <div>
         <Label htmlFor='email'>Email</Label>
         <div className='relative mt-1'>

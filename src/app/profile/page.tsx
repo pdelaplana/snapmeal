@@ -1,13 +1,14 @@
 'use client';
 
 import AppLayout from '@/components/layout/app-layout';
-import MealCapture from '@/components/meal/meal-capture';
+import PhotoCapture from '@/components/shared/photo-capture';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/context/auth-context';
 import { useMealLog } from '@/context/meal-log-context';
+import { useProfilePhoto } from '@/hooks/use-profile-photo';
 import { format, startOfDay } from 'date-fns';
 import { BarChart3, Camera, ChevronRight, Edit2, Palette, Settings } from 'lucide-react';
 import Link from 'next/link';
@@ -16,40 +17,40 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 const PROFILE_PHOTO_STORAGE_KEY = 'snapmeal_profile_photo_uri';
 
 export default function ProfilePage() {
-  const { user } = useAuth();
+  const { user, updateUserProfile } = useAuth();
+  const { uploadPhoto, isUploading } = useProfilePhoto();
   const { meals } = useMealLog();
   const [profilePhotoUri, setProfilePhotoUri] = useState<string | null>(null);
   const [isEditingPhoto, setIsEditingPhoto] = useState(false);
 
   useEffect(() => {
-    const storedPhotoUri = localStorage.getItem(PROFILE_PHOTO_STORAGE_KEY);
-    if (storedPhotoUri) {
-      setProfilePhotoUri(storedPhotoUri);
+    if (user) {
+      setProfilePhotoUri(user?.photoURL);
     }
-  }, []);
+  }, [user]);
 
-  const handleProfilePhotoCaptured = useCallback((dataUri: string) => {
-    if (dataUri) {
-      setProfilePhotoUri(dataUri);
-      localStorage.setItem(PROFILE_PHOTO_STORAGE_KEY, dataUri);
-    } else {
-      setProfilePhotoUri(null);
-      localStorage.removeItem(PROFILE_PHOTO_STORAGE_KEY);
-    }
-  }, []);
+  const profilePhotoUpdateHandler = useCallback(
+    async (dataUri: string) => {
+      if (dataUri && user) {
+        const photoURL = await uploadPhoto(user?.uid, dataUri);
+        updateUserProfile({ photoURL });
+      }
+    },
+    [updateUserProfile, user, uploadPhoto],
+  );
 
   const userInitial = user?.email ? user.email.charAt(0).toUpperCase() : '?';
   const totalMealsLogged = meals.length;
 
   const averageDailyCaloriesLast7Days = useMemo(() => {
     const sevenDaysAgo = startOfDay(new Date(new Date().setDate(new Date().getDate() - 6)));
-    const recentMeals = meals.filter((meal) => new Date(meal.timestamp) >= sevenDaysAgo);
+    const recentMeals = meals.filter((meal) => new Date(meal.date) >= sevenDaysAgo);
 
     if (recentMeals.length === 0) return 0;
 
     const calorieSum = recentMeals.reduce((sum, meal) => sum + (meal.estimatedCalories ?? 0), 0);
     const uniqueDaysWithMeals = new Set(
-      recentMeals.map((meal) => format(new Date(meal.timestamp), 'yyyy-MM-dd')),
+      recentMeals.map((meal) => format(new Date(meal.date), 'yyyy-MM-dd')),
     ).size;
 
     return uniqueDaysWithMeals > 0 ? calorieSum / uniqueDaysWithMeals : 0;
@@ -100,9 +101,13 @@ export default function ProfilePage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <MealCapture
-                  onPhotoCaptured={handleProfilePhotoCaptured}
-                  initialPhotoDataUri={profilePhotoUri}
+                <PhotoCapture
+                  onPhotoCaptured={profilePhotoUpdateHandler}
+                  initialPhotoDataUri={user?.photoURL || null}
+                  photoType='profile'
+                  aspectRatio='square'
+                  labelText='Profile Picture'
+                  helpText='Upload or take a photo for your profile'
                 />
                 <p className='mt-2 text-xs text-muted-foreground'>
                   Note: Labels in the photo capture tool might refer to "meal photo". This tool is

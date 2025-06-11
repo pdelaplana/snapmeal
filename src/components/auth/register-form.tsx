@@ -1,6 +1,5 @@
 'use client';
 
-import { registerUser } from '@/actions/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,7 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Key, Mail } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useActionState, useEffect } from 'react';
+import { FormEvent, useActionState, useEffect, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 
 function SubmitButton() {
@@ -34,11 +33,25 @@ export interface RegisterFormState {
 export default function RegisterForm() {
   const router = useRouter();
   const { toast } = useToast();
-  const { user: loggedInUserFromContext } = useAuth();
-  const [state, formAction] = useActionState<RegisterFormState | undefined, FormData>(
-    registerUser,
-    undefined,
-  );
+  const { user: loggedInUserFromContext, register } = useAuth();
+  const [isPending, setIsPending] = useState(false);
+  const [state, setState] = useState<RegisterFormState | undefined>(undefined);
+
+  // Handle form submission using the auth context register function
+  const submitHandler = async (formData: FormData) => {
+    setIsPending(true);
+
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
+
+    try {
+      const result = await register(email, password);
+      setState({ ...state, success: result.success, email: result.email, error: result.error });
+      // If registration is successful, redirect to dashboard
+    } finally {
+      setIsPending(false);
+    }
+  };
 
   useEffect(() => {
     if (state?.success && state.email) {
@@ -67,7 +80,7 @@ export default function RegisterForm() {
   }, [state, loggedInUserFromContext, router]);
 
   return (
-    <form action={formAction} className='space-y-6'>
+    <form action={submitHandler} className='space-y-6'>
       <div>
         <Label htmlFor='email'>Email</Label>
         <div className='relative mt-1'>

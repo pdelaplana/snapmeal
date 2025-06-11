@@ -13,8 +13,10 @@ export function LoadingSpinner(props: SVGProps<SVGSVGElement>) {
       strokeLinecap='round'
       strokeLinejoin='round'
       className='animate-spin'
+      style={{ animation: 'spin 1s linear infinite' }}
       {...props}
     >
+      <title>Loading...</title>
       <path d='M21 12a9 9 0 1 1-6.219-8.56' />
     </svg>
   );

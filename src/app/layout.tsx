@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import { Providers } from '@/components/providers'; // New import
+import { ReactQueryProvider } from '@/components/providers'; // New import
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/context/auth-context';
 import { MealLogProvider } from '@/context/meal-log-context';
@@ -28,16 +28,14 @@ export default function RootLayout({
         <link rel='icon' href='/favicon.ico' sizes='any' />
       </head>
       <body className='font-body antialiased'>
-        <Providers>
-          {' '}
-          {/* Wrap with React Query Provider */}
+        <ReactQueryProvider>
           <AuthProvider>
             <MealLogProvider>
               {children}
               <Toaster />
             </MealLogProvider>
           </AuthProvider>
-        </Providers>
+        </ReactQueryProvider>
       </body>
     </html>
   );

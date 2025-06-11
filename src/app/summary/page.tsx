@@ -52,12 +52,12 @@ export default function SummaryPage() {
 
     const summaries: Record<string, DailySummaryItem> = {};
 
-    meals.forEach((meal) => {
-      const dateKey = format(new Date(meal.timestamp), 'yyyy-MM-dd');
+    for (const meal of meals) {
+      const dateKey = format(new Date(meal.date), 'yyyy-MM-dd');
       if (!summaries[dateKey]) {
         summaries[dateKey] = {
           date: dateKey,
-          formattedDate: format(new Date(meal.timestamp), 'MMMM d, yyyy (EEEE)'),
+          formattedDate: format(new Date(meal.date), 'MMMM d, yyyy (EEEE)'),
           ...initialNutrientSummary(),
         };
       }
@@ -66,7 +66,7 @@ export default function SummaryPage() {
       summaries[dateKey].carbs += meal.carbs ?? 0;
       summaries[dateKey].fat += meal.fat ?? 0;
       summaries[dateKey].mealCount += 1;
-    });
+    }
 
     return Object.values(summaries).sort((a, b) => compareDesc(parseISO(a.date), parseISO(b.date)));
   }, [meals, mealsLoading]);
@@ -75,8 +75,8 @@ export default function SummaryPage() {
     if (mealsLoading || !meals || meals.length === 0) return [];
     const summaries: Record<string, WeeklySummaryItem> = {};
 
-    meals.forEach((meal) => {
-      const mealDate = new Date(meal.timestamp);
+    for (const meal of meals) {
+      const mealDate = new Date(meal.date);
       const sow = startOfWeek(mealDate, { weekStartsOn: 1 });
       const eow = endOfWeek(mealDate, { weekStartsOn: 1 });
       const weekKey = format(sow, 'yyyy-MM-dd');
@@ -94,7 +94,7 @@ export default function SummaryPage() {
       summaries[weekKey].carbs += meal.carbs ?? 0;
       summaries[weekKey].fat += meal.fat ?? 0;
       summaries[weekKey].mealCount += 1;
-    });
+    }
 
     return Object.values(summaries)
       .map((s) => ({
@@ -108,8 +108,8 @@ export default function SummaryPage() {
     if (mealsLoading || !meals || meals.length === 0) return [];
     const summaries: Record<string, MonthlySummaryItem> = {};
 
-    meals.forEach((meal) => {
-      const mealDate = new Date(meal.timestamp);
+    for (const meal of meals) {
+      const mealDate = new Date(meal.date);
       const monthKey = format(mealDate, 'yyyy-MM');
 
       if (!summaries[monthKey]) {
@@ -125,17 +125,17 @@ export default function SummaryPage() {
       summaries[monthKey].carbs += meal.carbs ?? 0;
       summaries[monthKey].fat += meal.fat ?? 0;
       summaries[monthKey].mealCount += 1;
-    });
+    }
 
     return Object.values(summaries)
       .map((s) => {
-        const daysInMonthVal = getDaysInMonth(parseISO(s.monthKey + '-01'));
+        const daysInMonthVal = getDaysInMonth(parseISO(`${s.monthKey}-01`));
         return {
           ...s,
           avgDailyCalories: s.calories > 0 ? s.calories / daysInMonthVal : 0,
         };
       })
-      .sort((a, b) => compareDesc(parseISO(a.monthKey + '-01'), parseISO(b.monthKey + '-01')));
+      .sort((a, b) => compareDesc(parseISO(`${a.monthKey}-01`), parseISO(`${b.monthKey}-01`)));
   }, [meals, mealsLoading]);
 
   const renderSummaryCard = (item: DailySummaryItem | WeeklySummaryItem | MonthlySummaryItem) => {
@@ -223,6 +223,7 @@ export default function SummaryPage() {
 
         <Tabs
           value={activeTab}
+          // biome-ignore lint/suspicious/noExplicitAny: <explanation>
           onValueChange={(value) => setActiveTab(value as any)}
           className='w-full'
         >

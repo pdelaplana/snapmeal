@@ -11,12 +11,29 @@ import Image from 'next/image';
 import type { ChangeEvent } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-interface MealCaptureProps {
+interface PhotoCaptureProps {
   onPhotoCaptured: (photoDataUri: string) => void;
   initialPhotoDataUri?: string | null;
+  photoType?: string;
+  aspectRatio?: 'video' | 'square' | 'wide' | 'tall';
+  maxSizeMB?: number;
+  previewAltText?: string;
+  labelText?: string;
+  helpText?: string;
+  showRemoveButton?: boolean;
 }
 
-export default function MealCapture({ onPhotoCaptured, initialPhotoDataUri }: MealCaptureProps) {
+export default function PhotoCapture({
+  onPhotoCaptured,
+  initialPhotoDataUri,
+  photoType = 'photo',
+  aspectRatio = 'video',
+  maxSizeMB = 10,
+  previewAltText = 'Photo preview',
+  labelText,
+  helpText,
+  showRemoveButton = true,
+}: PhotoCaptureProps) {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -29,6 +46,31 @@ export default function MealCapture({ onPhotoCaptured, initialPhotoDataUri }: Me
   const [cameraError, setCameraError] = useState<string | null>(null);
   const { toast } = useToast();
 
+  // Get display text based on photoType
+  const displayText = {
+    label: labelText || `Add ${photoType.charAt(0).toUpperCase() + photoType.slice(1)}`,
+    labelWithPhoto:
+      labelText || `Current ${photoType.charAt(0).toUpperCase() + photoType.slice(1)}`,
+    help: helpText || `Upload an image or take a new ${photoType}.`,
+    helpWithPhoto: helpText || `You can replace the current ${photoType} or remove it.`,
+  };
+
+  // Generate aspect ratio class
+  const getAspectRatioClass = () => {
+    switch (aspectRatio) {
+      case 'square':
+        return 'aspect-square';
+      case 'wide':
+        return 'aspect-[16/9]';
+      case 'tall':
+        return 'aspect-[3/4]';
+      case 'video':
+        return 'aspect-video';
+      default:
+        return 'aspect-video';
+    }
+  };
+
   useEffect(() => {
     if (initialPhotoDataUri) {
       setPhotoPreview(initialPhotoDataUri);
@@ -39,9 +81,11 @@ export default function MealCapture({ onPhotoCaptured, initialPhotoDataUri }: Me
   }, [initialPhotoDataUri]);
 
   const stopCameraStream = useCallback(() => {
-    if (videoRef.current && videoRef.current.srcObject) {
+    if (videoRef.current?.srcObject) {
       const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach((track) => track.stop());
+      for (const track of stream.getTracks()) {
+        track.stop();
+      }
       videoRef.current.srcObject = null;
     }
   }, []);
@@ -51,7 +95,7 @@ export default function MealCapture({ onPhotoCaptured, initialPhotoDataUri }: Me
 
     const getCameraPermission = async () => {
       if (currentView !== 'camera') {
-        stopCameraStream(); // Ensure stream is stopped if view changes
+        stopCameraStream();
         return;
       }
 
@@ -67,6 +111,7 @@ export default function MealCapture({ onPhotoCaptured, initialPhotoDataUri }: Me
         if (videoRef.current) {
           videoRef.current.srcObject = streamInstance;
         }
+        // biome-ignore lint/suspicious/noExplicitAny: <explanation>
       } catch (error: any) {
         console.error('Error accessing camera:', error);
         setHasCameraPermission(false);
@@ -90,13 +135,16 @@ export default function MealCapture({ onPhotoCaptured, initialPhotoDataUri }: Me
     return () => {
       // Cleanup function
       if (streamInstance) {
-        streamInstance.getTracks().forEach((track) => track.stop());
-      }
-      // Additional check for videoRef.current.srcObject because streamInstance might not be set if permission denied early
-      if (videoRef.current && videoRef.current.srcObject) {
-        const activeStream = videoRef.current.srcObject as MediaStream;
-        activeStream.getTracks().forEach((track) => track.stop());
-        videoRef.current.srcObject = null;
+        for (const track of streamInstance.getTracks()) {
+          track.stop();
+        }
+        if (videoRef.current?.srcObject) {
+          const activeStream = videoRef.current.srcObject as MediaStream;
+          for (const track of activeStream.getTracks()) {
+            track.stop();
+          }
+          videoRef.current.srcObject = null;
+        }
       }
     };
   }, [currentView, toast, stopCameraStream]);
@@ -104,6 +152,16 @@ export default function MealCapture({ onPhotoCaptured, initialPhotoDataUri }: Me
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      // Check file size
+      if (file.size > maxSizeMB * 1024 * 1024) {
+        toast({
+          variant: 'destructive',
+          title: 'File too large',
+          description: `Maximum file size is ${maxSizeMB}MB.`,
+        });
+        return;
+      }
+
       setFileName(file.name);
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -123,13 +181,13 @@ export default function MealCapture({ onPhotoCaptured, initialPhotoDataUri }: Me
     }
     onPhotoCaptured('');
     if (currentView === 'camera') {
-      setCurrentView('idle'); // Also stop camera if active
+      setCurrentView('idle');
     }
   };
 
   const handleTakePhotoClick = () => {
-    setPhotoPreview(null); // Clear any existing preview
-    onPhotoCaptured(''); // Notify parent that current photo is cleared for retake
+    setPhotoPreview(null);
+    onPhotoCaptured('');
     setCurrentView('camera');
   };
 
@@ -146,7 +204,7 @@ export default function MealCapture({ onPhotoCaptured, initialPhotoDataUri }: Me
         setPhotoPreview(dataUri);
         onPhotoCaptured(dataUri);
         setFileName(`capture-${Date.now()}.jpg`);
-        setCurrentView('idle'); // Switch back to idle to show preview
+        setCurrentView('idle');
         stopCameraStream();
       } else {
         toast({
@@ -175,13 +233,18 @@ export default function MealCapture({ onPhotoCaptured, initialPhotoDataUri }: Me
     return (
       <div className='space-y-6'>
         <div className='space-y-2'>
-          <Label className='text-lg font-medium'>Take Meal Photo</Label>
+          <Label className='text-lg font-medium'>
+            Take {photoType.charAt(0).toUpperCase() + photoType.slice(1)}
+          </Label>
           <p className='text-sm text-muted-foreground'>
-            Position your meal in the frame and snap a photo.
+            Position {photoType === 'profile' ? 'yourself' : `the ${photoType}`} in the frame and
+            snap a photo.
           </p>
         </div>
         {isCameraInitializing && (
-          <div className='flex flex-col items-center justify-center aspect-video w-full rounded-lg border-2 border-dashed border-primary bg-card p-8 text-center'>
+          <div
+            className={`flex flex-col items-center justify-center ${getAspectRatioClass()} w-full rounded-lg border-2 border-dashed border-primary bg-card p-8 text-center`}
+          >
             <LoadingSpinner className='mb-4 h-12 w-12 text-primary' />
             <p className='font-semibold'>Initializing Camera...</p>
           </div>
@@ -194,7 +257,9 @@ export default function MealCapture({ onPhotoCaptured, initialPhotoDataUri }: Me
           </Alert>
         )}
         {hasCameraPermission === true && (
-          <div className='relative mx-auto aspect-video w-full max-w-lg overflow-hidden rounded-lg border-2 border-primary bg-black shadow-md'>
+          <div
+            className={`relative mx-auto ${getAspectRatioClass()} w-full max-w-lg overflow-hidden rounded-lg border-2 border-primary bg-black shadow-md`}
+          >
             <video
               ref={videoRef}
               className='h-full w-full object-contain'
@@ -221,7 +286,7 @@ export default function MealCapture({ onPhotoCaptured, initialPhotoDataUri }: Me
             Cancel Camera
           </Button>
         </div>
-        <canvas ref={canvasRef} className='hidden'></canvas>
+        <canvas ref={canvasRef} className='hidden' />
       </div>
     );
   }
@@ -230,25 +295,26 @@ export default function MealCapture({ onPhotoCaptured, initialPhotoDataUri }: Me
   return (
     <div className='space-y-6'>
       <div className='space-y-2'>
-        <Label htmlFor='meal-photo-upload' className='text-lg font-medium'>
-          {photoPreview ? 'Current Meal Photo' : 'Add Meal Photo'}
+        <Label htmlFor='photo-upload' className='text-lg font-medium'>
+          {photoPreview ? displayText.labelWithPhoto : displayText.label}
         </Label>
         <p className='text-sm text-muted-foreground'>
-          {photoPreview
-            ? 'You can replace the current photo or remove it.'
-            : 'Upload an image or take a new photo of your meal.'}
+          {photoPreview ? displayText.helpWithPhoto : displayText.help}
         </p>
       </div>
 
       {photoPreview ? (
         <div className='space-y-4'>
-          <div className='relative mx-auto aspect-video w-full max-w-lg overflow-hidden rounded-lg border-2 border-dashed border-primary shadow-md'>
+          <div
+            className={`relative mx-auto ${getAspectRatioClass()} w-full max-w-lg overflow-hidden rounded-lg border-2 border-dashed border-primary shadow-md`}
+          >
             <Image
               src={photoPreview}
-              alt='Meal preview'
-              layout='fill'
-              objectFit='contain'
-              data-ai-hint='food meal'
+              alt={previewAltText}
+              fill
+              className='object-contain'
+              sizes='(max-width: 768px) 100vw, 50vw'
+              priority
             />
           </div>
           <div className='flex flex-col items-center gap-2 sm:flex-row sm:justify-center'>
@@ -264,20 +330,27 @@ export default function MealCapture({ onPhotoCaptured, initialPhotoDataUri }: Me
               <Camera className='mr-2 h-4 w-4' />
               Retake with Camera
             </Button>
-            <Button variant='destructive' onClick={handleRemovePhoto} className='w-full sm:w-auto'>
-              <Trash2 className='mr-2 h-4 w-4' />
-              Remove Photo
-            </Button>
+            {showRemoveButton && (
+              <Button
+                variant='destructive'
+                onClick={handleRemovePhoto}
+                className='w-full sm:w-auto'
+              >
+                <Trash2 className='mr-2 h-4 w-4' />
+                Remove Photo
+              </Button>
+            )}
           </div>
         </div>
       ) : (
         <div className='space-y-4'>
+          {/* biome-ignore lint/a11y/useKeyWithClickEvents: <explanation> */}
           <div
-            className='flex aspect-video w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/50 bg-card p-8 text-center transition-colors hover:border-primary hover:bg-accent/10'
+            className={`flex ${getAspectRatioClass()} w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/50 bg-card p-8 text-center transition-colors hover:border-primary hover:bg-accent/10`}
             onClick={() => fileInputRef.current?.click()}
             onDrop={(e) => {
               e.preventDefault();
-              if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+              if (e.dataTransfer.files?.[0]) {
                 if (fileInputRef.current) fileInputRef.current.files = e.dataTransfer.files;
                 handleFileChange({
                   target: fileInputRef.current,
@@ -288,7 +361,7 @@ export default function MealCapture({ onPhotoCaptured, initialPhotoDataUri }: Me
           >
             <UploadCloud className='mb-4 h-12 w-12 text-muted-foreground' />
             <p className='mb-2 font-semibold text-foreground'>Click or drag & drop to upload</p>
-            <p className='text-xs text-muted-foreground'>PNG, JPG, GIF up to 10MB</p>
+            <p className='text-xs text-muted-foreground'>PNG, JPG, GIF up to {maxSizeMB}MB</p>
           </div>
           <div className='text-center'>
             <Button variant='outline' onClick={handleTakePhotoClick} size='lg'>
@@ -300,14 +373,14 @@ export default function MealCapture({ onPhotoCaptured, initialPhotoDataUri }: Me
       )}
       <Input
         ref={fileInputRef}
-        id='meal-photo-upload'
-        name='meal-photo-upload'
+        id='photo-upload'
+        name='photo-upload'
         type='file'
         accept='image/*'
         className='sr-only'
         onChange={handleFileChange}
       />
-      <canvas ref={canvasRef} className='hidden'></canvas>
+      <canvas ref={canvasRef} className='hidden' />
       {fileName && !photoPreview && currentView === 'idle' && (
         <p className='text-sm text-muted-foreground'>Selected for upload: {fileName}</p>
       )}
