@@ -19,6 +19,9 @@ interface MealLogContextType {
   deleteMeal: (mealId: string) => void;
   getMealById: (id: string) => Meal | undefined;
   loading: boolean;
+  hasNextPage: boolean;
+  isFetchingNextPage: boolean;
+  fetchNextPage: () => void;
 }
 
 const MealLogContext = createContext<MealLogContextType | undefined>(undefined);
@@ -26,11 +29,17 @@ const MealLogContext = createContext<MealLogContextType | undefined>(undefined);
 export function MealLogProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
 
-  const { data: meals, isLoading: initialLoading } = useFetchMealsByUserId(user?.uid);
+  const {
+    data: meals,
+    isLoading: initialLoading,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+  } = useFetchMealsByUserId(user?.uid);
 
   const { mutateAsync: addMealAsync } = useAddMealMutation();
   const { mutateAsync: updateMealAsync } = useUpdateMealMutation();
-  const { mutateAsync: deleteMealAsync } = useDeleteMealMutation(); // Assuming deleteMeal is implemented similarly
+  const { mutateAsync: deleteMealAsync } = useDeleteMealMutation();
 
   const addMeal = useCallback(
     async (addMealDTO: AddMealDTO) => {
@@ -84,6 +93,9 @@ export function MealLogProvider({ children }: { children: ReactNode }) {
         deleteMeal,
         getMealById,
         loading: initialLoading,
+        fetchNextPage,
+        hasNextPage: hasNextPage ?? false,
+        isFetchingNextPage: isFetchingNextPage ?? false,
       }}
     >
       {children}

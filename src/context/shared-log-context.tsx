@@ -1,20 +1,41 @@
+import { useFetchMealsByUserId } from '@/hooks/queries/use-fetch-meals-by-userid';
 import type { Meal } from '@/types';
 import { createContext, useContext } from 'react';
 
 interface SharedLogContextValue {
   meals: Meal[];
   loading: boolean;
+  hasNextPage?: boolean;
+  fetchNextPage?: () => void;
+  isFetchingNextPage?: boolean;
 }
 
 const SharedLogContext = createContext<SharedLogContextValue | undefined>(undefined);
 
 export function SharedLogProvider({
   children,
-  meals,
+  userId,
   loading,
-}: { children: React.ReactNode; meals: Meal[]; loading: boolean }) {
+}: { children: React.ReactNode; userId: string | undefined; loading: boolean }) {
+  const {
+    data: meals,
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
+  } = useFetchMealsByUserId(userId);
+
   return (
-    <SharedLogContext.Provider value={{ meals, loading }}>{children}</SharedLogContext.Provider>
+    <SharedLogContext.Provider
+      value={{
+        meals: meals?.pages.flatMap((page) => page.meals) || [],
+        loading,
+        hasNextPage,
+        fetchNextPage,
+        isFetchingNextPage,
+      }}
+    >
+      {children}
+    </SharedLogContext.Provider>
   );
 }
 

@@ -4,17 +4,19 @@ import { LoadingSpinner } from '@/components/loading-spinner';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useMealLog } from '@/context/meal-log-context';
-import { useSharedLog } from '@/context/shared-log-context'; // Import the context for shared logs
+import { useSharedLog } from '@/context/shared-log-context';
 import type { Meal } from '@/types';
 import { compareDesc, format, isToday, isYesterday, parseISO } from 'date-fns';
-import { PlusCircle } from 'lucide-react';
+import { Loader2, PlusCircle } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation'; // To detect if on shared log page
+import { usePathname } from 'next/navigation';
+import { useEffect, useRef } from 'react';
 import MealLogItem from './meal-log-item';
 
 export default function MealLogList() {
   const pathname = usePathname();
   const isViewingSharedLog = pathname.startsWith('/view-shared-log');
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   // Conditionally use the appropriate hook
   const mainLog = useMealLog();
@@ -26,9 +28,18 @@ export default function MealLogList() {
     sharedLog = null; // Not in shared context
   }
 
-  const { meals, loading } = isViewingSharedLog && sharedLog ? sharedLog : mainLog;
+  const { meals, loading, hasNextPage, isFetchingNextPage, fetchNextPage } =
+    isViewingSharedLog && sharedLog ? sharedLog : mainLog;
 
-  if (loading) {
+  // Helper function to scroll to top of the meal list
+  const scrollToTop = () => {
+    if (scrollAreaRef.current) {
+      scrollAreaRef.current.scrollTop = 0;
+    }
+  };
+
+  // If we're showing empty state loading indicator
+  if (loading && meals.length === 0) {
     return (
       <div className='flex justify-center py-8'>
         <LoadingSpinner className='h-8 w-8 text-primary' />
@@ -36,6 +47,7 @@ export default function MealLogList() {
     );
   }
 
+  // Empty state - no meals
   if (meals.length === 0) {
     if (isViewingSharedLog) {
       return (
@@ -90,10 +102,13 @@ export default function MealLogList() {
   // Sort the date keys in descending order (most recent day first)
   const dateKeys = Object.keys(groupedMeals).sort((a, b) => compareDesc(parseISO(a), parseISO(b)));
 
+  // Handle loading more meals
+  const handleLoadMore = () => {
+    fetchNextPage?.();
+  };
+
   return (
-    <ScrollArea className='h-[calc(100vh-280px)] sm:h-[calc(100vh-220px)]'>
-      {' '}
-      {/* Adjusted height for shared view */}
+    <ScrollArea className='h-[calc(100vh-280px)] sm:h-[calc(100vh-220px)]' ref={scrollAreaRef}>
       <div className='space-y-8 p-1 sm:p-4'>
         {dateKeys.map((dateKey) => {
           const mealsForDay = groupedMeals[dateKey];
@@ -151,6 +166,35 @@ export default function MealLogList() {
           }
           return null;
         })}
+
+        {/* Load More button */}
+        {hasNextPage && (
+          <div className='mt-8 flex justify-center pb-6'>
+            <Button
+              onClick={handleLoadMore}
+              disabled={isFetchingNextPage}
+              variant='outline'
+              size='lg'
+              className='min-w-[180px]'
+            >
+              {isFetchingNextPage ? (
+                <>
+                  <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                  Loading...
+                </>
+              ) : (
+                'Load More Meals'
+              )}
+            </Button>
+          </div>
+        )}
+
+        {/* Initial loading indicator for first page */}
+        {loading && !isFetchingNextPage && meals.length > 0 && (
+          <div className='flex justify-center py-4'>
+            <LoadingSpinner className='h-6 w-6 text-primary' />
+          </div>
+        )}
       </div>
     </ScrollArea>
   );

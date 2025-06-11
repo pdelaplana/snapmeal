@@ -8,6 +8,7 @@ interface MealPage {
   meals: Meal[];
   lastDocId: string | null;
   lastCursor: string | null;
+  hasMore: boolean;
 }
 
 /**
@@ -26,7 +27,11 @@ export function useFetchMealsByUserId(userId: string | undefined, limit = 10) {
     initialPageParam: { docId: null, date: null },
 
     getNextPageParam: (lastPage) => {
-      if (!lastPage.lastDocId || !lastPage.lastCursor) return null;
+      // Only return cursor data if there's more data to fetch
+      // This is the key part that fixes your issue
+      if (!lastPage.hasMore || !lastPage.lastDocId || !lastPage.lastCursor) {
+        return undefined; // This makes hasNextPage false
+      }
       return {
         docId: lastPage.lastDocId,
         date: lastPage.lastCursor,
