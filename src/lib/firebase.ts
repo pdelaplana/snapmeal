@@ -1,6 +1,8 @@
 // Import the functions you need from the SDKs you need
-import { type FirebaseApp, getApp, getApps, initializeApp } from "firebase/app";
-import { type Auth, getAuth } from "firebase/auth";
+import { type FirebaseApp, getApp, getApps, initializeApp } from 'firebase/app';
+import { type Auth, getAuth } from 'firebase/auth';
+import { type Firestore, getFirestore } from 'firebase/firestore';
+import { type FirebaseStorage, getStorage } from 'firebase/storage';
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -18,15 +20,11 @@ const firebaseConfig = {
 };
 
 // Validate essential Firebase config
-if (
-  !firebaseConfig.apiKey ||
-  !firebaseConfig.authDomain ||
-  !firebaseConfig.projectId
-) {
+if (!firebaseConfig.apiKey || !firebaseConfig.authDomain || !firebaseConfig.projectId) {
   console.error(
-    "Firebase configuration error: Missing API Key, Auth Domain, or Project ID. " +
-      "Ensure NEXT_PUBLIC_FIREBASE_API_KEY, NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN, " +
-      "and NEXT_PUBLIC_FIREBASE_PROJECT_ID are set in your .env.local file.",
+    'Firebase configuration error: Missing API Key, Auth Domain, or Project ID. ' +
+      'Ensure NEXT_PUBLIC_FIREBASE_API_KEY, NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN, ' +
+      'and NEXT_PUBLIC_FIREBASE_PROJECT_ID are set in your .env.local file.',
   );
   // Potentially throw an error or use placeholder values if critical for app functionality
   // For now, we'll log the error. The app might not function correctly for Firebase services.
@@ -42,4 +40,8 @@ if (!getApps().length) {
 
 const auth: Auth = getAuth(app);
 
-export { app, auth };
+const db: Firestore = getFirestore(app, 'test');
+
+const storage: FirebaseStorage = getStorage(app);
+
+export { app, auth, db, storage };

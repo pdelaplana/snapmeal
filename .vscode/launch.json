@@ -10,6 +10,19 @@
       "name": "Launch Edge against localhost",
       "url": "http://localhost:9005",
       "webRoot": "${workspaceFolder}"
+    },
+    {
+      "name": "Next.js: debug server-side",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "npm run dev"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Full Stack: Server + Client",
+      "configurations": ["Next.js: debug server-side", "Launch Edge against localhost"],
+      "stopAll": true
     }
   ]
 }
