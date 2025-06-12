@@ -29,16 +29,16 @@ env:
     value: snapmeal-sa2e9.appspot.com # Replace with your actual Firebase Storage Bucket
 
   - variable: NEXT_PUBLIC_FIREBASE_API_KEY
-    secret: firenase_api_key  # Replace with your actual Firebase Project ID
+    secret: firebase_api_key  # Replace with your actual Firebase Project ID
 
   - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
-    secret: firenase-messaging-sender-id
+    secret: firebase-messaging-sender-id
 
   - variable: NEXT_PUBLIC_FIREBASE_APP_ID
     secret: firebase-app-id # Replace with your actual Firebase App ID
 
   - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
-    secret: firenase-messaging-sender-id # Replace with your actual Firebase Measurement ID  
+    secret: firebase-messaging-sender-id # Replace with your actual Firebase Measurement ID  
 
   - variable: NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
     value: firebase-Measurement-id # Replace with your actual Firebase Measurement ID  
