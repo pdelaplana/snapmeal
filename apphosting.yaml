@@ -5,3 +5,54 @@ runConfig:
   # Increase this value if you'd like to automatically spin up
   # more instances in response to increased traffic.
   maxInstances: 1
+  # Minimum number of instances to keep running
+  minInstances: 0
+  # Memory allocation for each instance (128MB-4GB)
+  memory: 512MB
+  # CPU allocation (0.25, 0.5, 1.0, 2.0, 4.0)
+  cpu: 0.5
+
+# Node.js version to use
+runtime: nodejs20
+
+# Environment variables
+env:
+  # Runtime environment
+- variable: NODE_ENV  
+  value: development
+
+- variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+  value: snapmeal-sa2e9 # Replace with your actual Firebase Project ID
+
+- variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+  value: snapmeal-sa2e9.firebaseapp.com # Replace with your actual Firebase Auth Domain
+
+- variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+  value: snapmeal-sa2e9.appspot.com # Replace with your actual Firebase Storage Bucket
+
+- variable: NEXT_PUBLIC_FIREBASE_API_KEY
+  secret: firenase_api_key  # Replace with your actual Firebase Project ID
+
+- variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+  secret: firenase-messaging-sender-id
+
+- variable: NEXT_PUBLIC_FIREBASE_APP_ID
+  secret: firebase-app-id # Replace with your actual Firebase App ID
+
+- variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+  secret: firenase-messaging-sender-id # Replace with your actual Firebase Measurement ID  
+
+- variable: NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
+  value: firebase-Measurement-id # Replace with your actual Firebase Measurement ID  
+
+- variable: NEXT_PUBLIC_FIREBASE_FIRESTORE_DB
+  value: development # Replace with your actual Firebase Firestore Database ID
+
+- variable: NEXT_PUBLIC_ENABLE_SHARING_FEATURE
+  value: false # Set to true or false based on your feature flag
+
+- variable: FIREBASE_ADMIN_SECRET_NAME
+  value: firebase-admin-sdk-credentials # Replace with your actual Firebase Admin SDK secret name
+
+- variable: FIREBASE_ADMIN_SECRET_VERSION
+  value: latest # Replace with the specific version if needed, or keep as 'latest'
