@@ -16,9 +16,6 @@ runConfig:
 # Environment variables
 env:
   # Runtime environment
-  - variable: NODE_ENV  
-    value: development
-
   - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
     value: snapmeal-sa2e9 # Replace with your actual Firebase Project ID
 
