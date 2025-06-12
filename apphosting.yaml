@@ -29,7 +29,7 @@ env:
     value: snapmeal-sa2e9.appspot.com # Replace with your actual Firebase Storage Bucket
 
   - variable: NEXT_PUBLIC_FIREBASE_API_KEY
-    secret: firebase_api_key  # Replace with your actual Firebase Project ID
+    secret: firebase-api-key  # Replace with your actual Firebase Project ID
 
   - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
     secret: firebase-messaging-sender-id
