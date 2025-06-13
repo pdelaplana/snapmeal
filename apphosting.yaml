@@ -34,9 +34,6 @@ env:
   - variable: NEXT_PUBLIC_FIREBASE_APP_ID
     secret: firebase-app-id # Replace with your actual Firebase App ID
 
-  - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
-    secret: firebase-messaging-sender-id # Replace with your actual Firebase Measurement ID  
-
   - variable: NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
     value: firebase-Measurement-id # Replace with your actual Firebase Measurement ID  
 
