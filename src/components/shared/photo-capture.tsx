@@ -44,7 +44,12 @@ export default function PhotoCapture({
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [isCameraInitializing, setIsCameraInitializing] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>([]);
+  const [selectedCameraId, setSelectedCameraId] = useState<string | null>(null);
   const { toast } = useToast();
+
+  // Reference to track if we need to request camera permission to get labels
+  const cameraLabelsCheckedRef = useRef(false);
 
   // Get display text based on photoType
   const displayText = {
@@ -71,15 +76,27 @@ export default function PhotoCapture({
     }
   };
 
-  useEffect(() => {
-    if (initialPhotoDataUri) {
-      setPhotoPreview(initialPhotoDataUri);
-    } else {
-      setPhotoPreview(null);
-      setFileName(null);
-    }
-  }, [initialPhotoDataUri]);
+  // Check if device is likely a mobile device or a laptop/desktop
+  const isMobileDevice = () => {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+      navigator?.userAgent || '',
+    );
+  };
 
+  // Check if the current device is mobile
+  const isMobile = isMobileDevice();
+
+  // Add this function inside your component before any hooks
+  const checkCameraSupport = () => {
+    // Check if we have getUserMedia API
+    const hasUserMedia = !!navigator.mediaDevices?.getUserMedia;
+    // Check if we're on HTTPS (required for camera in production)
+    const isSecureContext = window.isSecureContext || process.env.NODE_ENV === 'development';
+
+    return hasUserMedia && isSecureContext;
+  };
+
+  // Function to stop the camera stream
   const stopCameraStream = useCallback(() => {
     if (videoRef.current?.srcObject) {
       const stream = videoRef.current.srcObject as MediaStream;
@@ -90,64 +107,201 @@ export default function PhotoCapture({
     }
   }, []);
 
-  useEffect(() => {
-    let streamInstance: MediaStream | null = null;
+  // Function to get available cameras and update camera selection UI
+  const getAvailableCameras = useCallback(async () => {
+    if (!navigator.mediaDevices?.enumerateDevices) {
+      console.log('enumerateDevices() not supported.');
+      setAvailableCameras([]);
+      return [];
+    }
 
-    const getCameraPermission = async () => {
-      if (currentView !== 'camera') {
-        stopCameraStream();
-        return;
+    try {
+      // Check if we need to request camera permissions to get labels
+      // Using a ref instead of state dependency to prevent re-renders
+      if (!cameraLabelsCheckedRef.current) {
+        try {
+          // Get temporary access to see labels (will be closed right after)
+          const tempStream = await navigator.mediaDevices.getUserMedia({ video: true });
+          for (const track of tempStream.getTracks()) {
+            track.stop();
+          }
+          // Mark that we've checked for labels
+          cameraLabelsCheckedRef.current = true;
+        } catch (err) {
+          console.log('Failed to get temporary camera access for labels:', err);
+          // Continue anyway as we might still get devices without labels
+        }
       }
 
-      setIsCameraInitializing(true);
-      setCameraError(null);
-      setHasCameraPermission(null);
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter((device) => device.kind === 'videoinput');
+
+      console.log(`Available cameras (${videoDevices.length}):`, videoDevices);
+
+      // Store cameras in state
+      setAvailableCameras(videoDevices);
+
+      // Auto-select first camera if none is selected yet
+      if (videoDevices.length > 0 && !selectedCameraId) {
+        setSelectedCameraId(videoDevices[0].deviceId);
+      }
+
+      return videoDevices;
+    } catch (error) {
+      console.error('Error enumerating devices:', error);
+      setAvailableCameras([]);
+      return [];
+    }
+  }, [selectedCameraId]); // Added selectedCameraId as a dependency
+
+  // Function to handle camera change
+  const handleCameraChange = (newCameraId: string) => {
+    setSelectedCameraId(newCameraId);
+    stopCameraStream();
+    setCurrentView('camera');
+  };
+
+  // Function to initialize the camera
+  const initializeCamera = useCallback(async () => {
+    if (currentView !== 'camera') return;
+
+    setIsCameraInitializing(true);
+    setCameraError(null);
+
+    // Get available cameras
+    await getAvailableCameras();
+
+    try {
+      const initialConstraints = {
+        audio: false,
+        video: selectedCameraId
+          ? {
+              deviceId: { exact: selectedCameraId },
+              width: { ideal: 1280, min: 640 },
+              height: { ideal: 720, min: 480 },
+              aspectRatio: { ideal: 16 / 9 },
+            }
+          : {
+              facingMode: isMobile ? 'environment' : 'user',
+              width: { ideal: 1280, min: 640 },
+              height: { ideal: 720, min: 480 },
+              aspectRatio: { ideal: 16 / 9 },
+            },
+      };
+
+      let streamInstance: MediaStream;
 
       try {
-        streamInstance = await navigator.mediaDevices.getUserMedia({
-          video: true,
-        });
-        setHasCameraPermission(true);
-        if (videoRef.current) {
-          videoRef.current.srcObject = streamInstance;
+        // First attempt with preferred facing mode
+        streamInstance = await navigator.mediaDevices.getUserMedia(initialConstraints);
+      } catch (error) {
+        console.log('First camera attempt failed, trying fallback option...', error);
+        try {
+          // If first attempt fails, try with the opposite camera
+          streamInstance = await navigator.mediaDevices.getUserMedia({
+            audio: false,
+            video: {
+              facingMode: isMobile ? 'user' : 'environment',
+              width: { ideal: 1280, min: 640 },
+              height: { ideal: 720, min: 480 },
+              aspectRatio: { ideal: 16 / 9 },
+            },
+          });
+        } catch (secondError) {
+          console.log(
+            'Second camera attempt failed, trying with basic constraints...',
+            secondError,
+          );
+          // Final fallback with minimal constraints
+          streamInstance = await navigator.mediaDevices.getUserMedia({
+            video: true,
+          });
         }
-        // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-      } catch (error: any) {
-        console.error('Error accessing camera:', error);
-        setHasCameraPermission(false);
-        const errorMessage =
-          error.name === 'NotAllowedError'
-            ? 'Camera permission was denied. Please enable it in your browser settings.'
-            : `Could not access camera: ${error.message}. Ensure it's not in use by another app.`;
-        setCameraError(errorMessage);
-        toast({
-          variant: 'destructive',
-          title: 'Camera Access Issue',
-          description: errorMessage,
-        });
-      } finally {
-        setIsCameraInitializing(false);
       }
-    };
 
-    getCameraPermission();
+      setHasCameraPermission(true);
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = streamInstance;
+
+        // Important: Add these event handlers to debug issues
+        videoRef.current.onloadedmetadata = () => {
+          if (videoRef.current) {
+            console.log(
+              `Video dimensions: ${videoRef.current.videoWidth}x${videoRef.current.videoHeight}`,
+            );
+            // Once metadata is loaded, explicitly call play()
+            videoRef.current.play().catch((err) => {
+              console.error('Error playing video:', err);
+              setCameraError('Could not start video playback. Please try again.');
+            });
+          }
+        };
+
+        // Add error handler to the video element
+        videoRef.current.onerror = (e) => {
+          console.error('Video element error:', e);
+          setCameraError('Video display error. Please try again or use upload instead.');
+        };
+
+        // Add additional check for video playing correctly
+        videoRef.current.onplaying = () => {
+          // Check if video dimensions are valid after a small delay
+          setTimeout(() => {
+            if (
+              videoRef.current &&
+              (videoRef.current.videoWidth === 0 || videoRef.current.videoHeight === 0)
+            ) {
+              console.error('Video dimensions are zero - camera may not be working properly');
+              setCameraError(
+                'Camera video stream appears to be empty. Try a different browser or device.',
+              );
+            }
+          }, 1000); // Check after 1 second of playback
+        };
+      }
+      // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+    } catch (error: any) {
+      console.error('Error accessing camera:', error);
+      setHasCameraPermission(false);
+      const errorMessage =
+        error.name === 'NotAllowedError'
+          ? 'Camera permission was denied. Please enable it in your browser settings.'
+          : error.name === 'NotReadableError'
+            ? 'Camera is in use by another application. Please close other apps using the camera.'
+            : `Could not access camera: ${error.message || error.name}. Ensure it's not in use by another app.`;
+      setCameraError(errorMessage);
+      toast({
+        variant: 'destructive',
+        title: 'Camera Access Issue',
+        description: errorMessage,
+      });
+    } finally {
+      setIsCameraInitializing(false);
+    }
+  }, [currentView, selectedCameraId, toast, isMobile, getAvailableCameras]);
+
+  // Effect for handling the initial photo data URI
+  useEffect(() => {
+    if (initialPhotoDataUri) {
+      setPhotoPreview(initialPhotoDataUri);
+    } else {
+      setPhotoPreview(null);
+      setFileName(null);
+    }
+  }, [initialPhotoDataUri]);
+
+  // Effect for initializing the camera when view changes
+  useEffect(() => {
+    if (currentView === 'camera') {
+      initializeCamera();
+    }
 
     return () => {
       // Cleanup function
-      if (streamInstance) {
-        for (const track of streamInstance.getTracks()) {
-          track.stop();
-        }
-        if (videoRef.current?.srcObject) {
-          const activeStream = videoRef.current.srcObject as MediaStream;
-          for (const track of activeStream.getTracks()) {
-            track.stop();
-          }
-          videoRef.current.srcObject = null;
-        }
-      }
+      stopCameraStream();
     };
-  }, [currentView, toast, stopCameraStream]);
+  }, [currentView, initializeCamera, stopCameraStream]);
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -186,6 +340,25 @@ export default function PhotoCapture({
   };
 
   const handleTakePhotoClick = () => {
+    if (!checkCameraSupport()) {
+      toast({
+        variant: 'destructive',
+        title: 'Camera Not Supported',
+        description:
+          'Your browser does not support camera access or it may be restricted in this context.',
+      });
+      return;
+    }
+
+    if (process.env.NODE_ENV !== 'development' && window.location.protocol !== 'https:') {
+      toast({
+        variant: 'destructive',
+        title: 'Camera Access Error',
+        description: 'Camera access requires HTTPS. Please use a secure connection.',
+      });
+      return;
+    }
+
     setPhotoPreview(null);
     onPhotoCaptured('');
     setCurrentView('camera');
@@ -241,14 +414,7 @@ export default function PhotoCapture({
             snap a photo.
           </p>
         </div>
-        {isCameraInitializing && (
-          <div
-            className={`flex flex-col items-center justify-center ${getAspectRatioClass()} w-full rounded-lg border-2 border-dashed border-primary bg-card p-8 text-center`}
-          >
-            <LoadingSpinner className='mb-4 h-12 w-12 text-primary' />
-            <p className='font-semibold'>Initializing Camera...</p>
-          </div>
-        )}
+
         {hasCameraPermission === false && cameraError && (
           <Alert variant='destructive'>
             <VideoOff className='h-4 w-4' />
@@ -262,11 +428,33 @@ export default function PhotoCapture({
           >
             <video
               ref={videoRef}
-              className='h-full w-full object-contain'
+              className='h-full w-full object-cover'
               autoPlay
-              muted
               playsInline
+              muted
             />
+
+            {/* Add an overlay during initialization for better UX */}
+            {isCameraInitializing && (
+              <div className='absolute inset-0 flex flex-col items-center justify-center bg-black/50'>
+                <LoadingSpinner className='h-10 w-10 text-primary' />
+                <p className='mt-2 text-sm font-medium text-white'>
+                  {isCameraInitializing ? 'Starting camera...' : 'Waiting for video...'}
+                </p>
+              </div>
+            )}
+
+            {/* Add a camera shutter button overlay for better mobile experience */}
+            <div className='absolute top-4 left-0 right-0 flex justify-center'>
+              <Button
+                onClick={handleSnapPhoto}
+                size='icon'
+                className='h-12 w-12 rounded-full bg-primary/90 hover:bg-primary'
+                aria-label='Take photo'
+              >
+                <Camera className='h-6 w-6' />
+              </Button>
+            </div>
           </div>
         )}
         <div className='flex flex-col items-center gap-3 sm:flex-row sm:justify-center'>
@@ -286,6 +474,27 @@ export default function PhotoCapture({
             Cancel Camera
           </Button>
         </div>
+
+        {hasCameraPermission === true && availableCameras.length > 1 && (
+          <div className='mb-2'>
+            <Label htmlFor='camera-select' className='mb-1 block text-sm font-medium'>
+              Select Camera
+            </Label>
+            <select
+              id='camera-select'
+              value={selectedCameraId || ''}
+              onChange={(e) => handleCameraChange(e.target.value)}
+              className='w-full rounded-md border border-input bg-background px-3 py-2 text-sm'
+              aria-label='Select camera'
+            >
+              {availableCameras.map((camera) => (
+                <option key={camera.deviceId} value={camera.deviceId}>
+                  {camera.label || `Camera ${camera.deviceId.substring(0, 5)}...`}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         <canvas ref={canvasRef} className='hidden' />
       </div>
     );
@@ -302,6 +511,16 @@ export default function PhotoCapture({
           {photoPreview ? displayText.helpWithPhoto : displayText.help}
         </p>
       </div>
+
+      {!checkCameraSupport() && (
+        <Alert variant='destructive' className='mt-4'>
+          <AlertTitle>Camera Not Supported</AlertTitle>
+          <AlertDescription>
+            Your browser does not support camera access. Please try using a different browser or
+            upload a photo instead.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {photoPreview ? (
         <div className='space-y-4'>
