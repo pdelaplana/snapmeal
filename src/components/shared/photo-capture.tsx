@@ -172,6 +172,7 @@ export default function PhotoCapture({
     await getAvailableCameras();
 
     try {
+      // Use consistent camera constraints that prioritize width for consistent photo dimensions
       const initialConstraints = {
         audio: false,
         video: selectedCameraId
@@ -179,13 +180,13 @@ export default function PhotoCapture({
               deviceId: { exact: selectedCameraId },
               width: { ideal: 1280, min: 640 },
               height: { ideal: 720, min: 480 },
-              aspectRatio: { ideal: 16 / 9 },
+              // No aspect ratio constraint - allows the browser to adapt better to device orientation
             }
           : {
               facingMode: isMobile ? 'environment' : 'user',
               width: { ideal: 1280, min: 640 },
               height: { ideal: 720, min: 480 },
-              aspectRatio: { ideal: 16 / 9 },
+              // No aspect ratio constraint - allows the browser to adapt better to device orientation
             },
       };
 
@@ -204,7 +205,7 @@ export default function PhotoCapture({
               facingMode: isMobile ? 'user' : 'environment',
               width: { ideal: 1280, min: 640 },
               height: { ideal: 720, min: 480 },
-              aspectRatio: { ideal: 16 / 9 },
+              // Removed aspect ratio constraint for better adaptation to device orientation
             },
           });
         } catch (secondError) {
@@ -363,17 +364,29 @@ export default function PhotoCapture({
     onPhotoCaptured('');
     setCurrentView('camera');
   };
-
   const handleSnapPhoto = () => {
     if (videoRef.current && canvasRef.current && hasCameraPermission) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
+
+      // Set a target width to ensure consistent photo dimensions
+      const targetWidth = 1280; // Consistent with our ideal constraints
+
+      // Calculate height while maintaining aspect ratio from video
+      const aspectRatio = video.videoHeight / video.videoWidth;
+      const targetHeight = Math.round(targetWidth * aspectRatio);
+
+      // Set canvas dimensions to our target size
+      canvas.width = targetWidth;
+      canvas.height = targetHeight;
+
       const context = canvas.getContext('2d');
       if (context) {
-        context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const dataUri = canvas.toDataURL('image/jpeg');
+        // Draw the video frame onto the canvas with our target dimensions
+        context.drawImage(video, 0, 0, targetWidth, targetHeight);
+
+        // Convert to data URI with quality setting (0.85 = 85% quality)
+        const dataUri = canvas.toDataURL('image/jpeg', 0.85);
         setPhotoPreview(dataUri);
         onPhotoCaptured(dataUri);
         setFileName(`capture-${Date.now()}.jpg`);
