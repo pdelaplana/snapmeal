@@ -130,7 +130,7 @@ export default function EditMealPage() {
   const DeleteButtonWrapper = (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button variant='destructive' size='lg' className='flex-1'>
+        <Button variant='destructive' size='lg' className='h-12 w-full'>
           <Trash2 className='mr-2 h-5 w-5' />
           Delete Meal
         </Button>

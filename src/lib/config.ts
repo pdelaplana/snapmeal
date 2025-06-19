@@ -9,7 +9,14 @@ const getBooleanEnv = (key: string, defaultValue: boolean): boolean => {
   return value === 'true';
 };
 
+// App version from package.json
+const APP_VERSION = '0.1.0'; // Hardcoded from package.json for client-side use
+// This could be updated by CI/CD pipeline or build script
+const BUILD_NUMBER = '42'; // Increment this with each release
+
 export const config = {
+  version: APP_VERSION,
+  build: BUILD_NUMBER,
   features: {
     enableSharing: getBooleanEnv('NEXT_PUBLIC_ENABLE_SHARING_FEATURE', false),
   },

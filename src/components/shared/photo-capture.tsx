@@ -328,23 +328,10 @@ export default function PhotoCapture({
             const imageWidth = img.width;
             const imageHeight = img.height;
 
-            // Determine if the image is in portrait or landscape orientation
-            const isPortrait = imageHeight > imageWidth;
-
-            // Set target dimensions based on orientation
-            const targetSize = 1280;
-            let targetWidth: number;
-            let targetHeight: number;
-
-            if (isPortrait) {
-              // Portrait orientation - prioritize height
-              targetHeight = targetSize;
-              targetWidth = Math.round(targetHeight * (imageWidth / imageHeight));
-            } else {
-              // Landscape orientation - prioritize width
-              targetWidth = targetSize;
-              targetHeight = Math.round(targetWidth * (imageHeight / imageWidth));
-            }
+            // Use fixed width for consistency - 1280px width is standard
+            const targetWidth = 1280;
+            // Calculate height maintaining the original aspect ratio
+            const targetHeight = Math.round(targetWidth * (imageHeight / imageWidth));
 
             // Create a canvas to resize the image
             const canvas = document.createElement('canvas');
@@ -420,29 +407,12 @@ export default function PhotoCapture({
       const videoWidth = video.videoWidth;
       const videoHeight = video.videoHeight;
 
-      // Determine if the video is in portrait or landscape orientation
-      const isPortrait = videoHeight > videoWidth;
+      // Use fixed dimensions for consistency - 1280px width is standard
+      const targetWidth = 1280;
+      // Calculate height maintaining the original aspect ratio
+      const targetHeight = Math.round(targetWidth * (videoHeight / videoWidth));
 
-      // Set target dimensions based on orientation
-      // For portrait, we'll make the height 1280px and calculate width proportionally
-      // For landscape, we'll make the width 1280px and calculate height proportionally
-      const targetSize = 1280;
-      let targetWidth: number;
-      let targetHeight: number;
-
-      if (isPortrait) {
-        // Portrait orientation - prioritize height
-        targetHeight = targetSize;
-        targetWidth = Math.round(targetHeight * (videoWidth / videoHeight));
-      } else {
-        // Landscape orientation - prioritize width
-        targetWidth = targetSize;
-        targetHeight = Math.round(targetWidth * (videoHeight / videoWidth));
-      }
-
-      console.log(
-        `Video dimensions: ${videoWidth}x${videoHeight}, Orientation: ${isPortrait ? 'Portrait' : 'Landscape'}`,
-      );
+      console.log(`Video dimensions: ${videoWidth}x${videoHeight}`);
       console.log(`Target dimensions: ${targetWidth}x${targetHeight}`);
 
       // Set canvas dimensions to our target size

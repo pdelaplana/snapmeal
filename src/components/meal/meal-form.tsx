@@ -583,16 +583,17 @@ export default function MealForm({
               />
             </div>
 
-            <div className='flex flex-col gap-4 sm:flex-row'>
+            <div className='flex flex-col space-y-4'>
               <Button
                 onClick={handleSubmit}
                 size='lg'
-                className={mode === 'edit' ? 'flex-1' : 'w-full'}
+                className='h-12 w-full'
                 disabled={!canSubmitMeal() || isEstimating || isProcessing}
               >
                 {submitButtonIcon}
                 {submitButtonText}
               </Button>
+
               {extraActions}
             </div>
           </CardContent>

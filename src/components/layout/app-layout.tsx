@@ -3,6 +3,7 @@
 import { LoadingSpinner } from '@/components/loading-spinner';
 import SiteHeader from '@/components/site-header';
 import { useAuth } from '@/context/auth-context';
+import { config } from '@/lib/config';
 import { useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { useEffect } from 'react';
@@ -33,8 +34,11 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     <div className='flex min-h-screen flex-col'>
       <SiteHeader />
       <main className='flex-1'>{children}</main>
-      <footer className='py-6 text-center text-sm text-muted-foreground'>
-        © {new Date().getFullYear()} SnapMeal. All rights reserved.
+      <footer className='py-3 text-center text-xs text-muted-foreground'>
+        © {new Date().getFullYear()} SnapMeal. All rights reserved.{' '}
+        <span className='ml-2'>
+          {config.version} (build {config.build})
+        </span>
       </footer>
     </div>
   );

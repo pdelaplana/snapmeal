@@ -11,7 +11,8 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "biome:check": "biome check .",
-    "biome:format": "biome format --write ."
+    "biome:format": "biome format --write .",
+    "version:bump-build": "node scripts/update-build-number.mjs"
   },
   "dependencies": {
     "@genkit-ai/googleai": "^1.8.0",

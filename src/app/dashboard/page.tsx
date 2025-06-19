@@ -39,7 +39,7 @@ export default function DashboardPage() {
     <AppLayout>
       <div className='container mx-auto px-4 py-8 sm:px-6 lg:px-8'>
         <div className='mb-8 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center'>
-          <h1 className='font-headline text-3xl font-bold text-foreground'>Your Meal Log</h1>
+          <h1 className='font-headline text-2xl font-bold text-foreground'>Your Meal Log</h1>
 
           {/* Mobile view: Dropdown menu */}
           <div className='md:hidden w-full'>
