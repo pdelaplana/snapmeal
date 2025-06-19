@@ -48,3 +48,6 @@ env:
 
   - variable: FIREBASE_ADMIN_SECRET_VERSION
     value: latest # Replace with the specific version if needed, or keep as 'latest'
+
+  - variable: GEMINI_API_KEY
+    secret: gemini-api-key # Replace with your actual Firebase App ID
