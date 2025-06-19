@@ -119,27 +119,13 @@ const estimateCaloriesMacrosFlow = ai.defineFlow(
 
       const response = await estimateCaloriesMacrosPrompt(flowInput);
 
-      if (response.error) {
-        console.error(
-          'Error from AI model with input:',
-          JSON.stringify(flowInput),
-          'Error:',
-          response.error,
-        );
-        throw new Error(
-          `AI model failed to generate a response: ${String(response.error.message || response.error || 'Reason unknown')}`,
-        );
-      }
-
       if (!response.output) {
         console.error(
-          'AI model returned no output and no error. Input:',
+          'AI model failed to generate a valid response with input:',
           JSON.stringify(flowInput),
-          'Raw response candidates:',
-          response.candidates,
         );
         throw new Error(
-          'AI model returned no valid output. This might be due to content filtering or an issue with the prompt response format.',
+          'AI model failed to generate a response. This might be due to content filtering or an issue with the prompt response format.',
         );
       }
 
@@ -177,7 +163,7 @@ const estimateCaloriesMacrosFlow = ai.defineFlow(
       }
 
       return output;
-    } catch (flowError: any) {
+    } catch (flowError: unknown) {
       console.error(
         'Critical error in estimateCaloriesMacrosFlow with input:',
         JSON.stringify(input),

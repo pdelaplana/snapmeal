@@ -303,7 +303,6 @@ export default function PhotoCapture({
       stopCameraStream();
     };
   }, [currentView, initializeCamera, stopCameraStream]);
-
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -318,13 +317,61 @@ export default function PhotoCapture({
       }
 
       setFileName(file.name);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const dataUri = reader.result as string;
-        setPhotoPreview(dataUri);
-        onPhotoCaptured(dataUri);
+
+      // Process the image to ensure consistent dimensions
+      const processImageFile = (file: File) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new globalThis.Image();
+          img.onload = () => {
+            // Get image dimensions
+            const imageWidth = img.width;
+            const imageHeight = img.height;
+
+            // Determine if the image is in portrait or landscape orientation
+            const isPortrait = imageHeight > imageWidth;
+
+            // Set target dimensions based on orientation
+            const targetSize = 1280;
+            let targetWidth: number;
+            let targetHeight: number;
+
+            if (isPortrait) {
+              // Portrait orientation - prioritize height
+              targetHeight = targetSize;
+              targetWidth = Math.round(targetHeight * (imageWidth / imageHeight));
+            } else {
+              // Landscape orientation - prioritize width
+              targetWidth = targetSize;
+              targetHeight = Math.round(targetWidth * (imageHeight / imageWidth));
+            }
+
+            // Create a canvas to resize the image
+            const canvas = document.createElement('canvas');
+            canvas.width = targetWidth;
+            canvas.height = targetHeight;
+
+            // Draw the image on the canvas
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+
+              // Convert to data URI with consistent quality
+              const resizedDataUri = canvas.toDataURL('image/jpeg', 0.85);
+              setPhotoPreview(resizedDataUri);
+              onPhotoCaptured(resizedDataUri);
+            } else {
+              // Fallback if canvas context fails
+              setPhotoPreview(img.src);
+              onPhotoCaptured(img.src);
+            }
+          };
+          img.src = e.target?.result as string;
+        };
+        reader.readAsDataURL(file);
       };
-      reader.readAsDataURL(file);
+
+      processImageFile(file);
     }
   };
 
@@ -369,12 +416,34 @@ export default function PhotoCapture({
       const video = videoRef.current;
       const canvas = canvasRef.current;
 
-      // Set a target width to ensure consistent photo dimensions
-      const targetWidth = 1280; // Consistent with our ideal constraints
+      // Get video dimensions
+      const videoWidth = video.videoWidth;
+      const videoHeight = video.videoHeight;
 
-      // Calculate height while maintaining aspect ratio from video
-      const aspectRatio = video.videoHeight / video.videoWidth;
-      const targetHeight = Math.round(targetWidth * aspectRatio);
+      // Determine if the video is in portrait or landscape orientation
+      const isPortrait = videoHeight > videoWidth;
+
+      // Set target dimensions based on orientation
+      // For portrait, we'll make the height 1280px and calculate width proportionally
+      // For landscape, we'll make the width 1280px and calculate height proportionally
+      const targetSize = 1280;
+      let targetWidth: number;
+      let targetHeight: number;
+
+      if (isPortrait) {
+        // Portrait orientation - prioritize height
+        targetHeight = targetSize;
+        targetWidth = Math.round(targetHeight * (videoWidth / videoHeight));
+      } else {
+        // Landscape orientation - prioritize width
+        targetWidth = targetSize;
+        targetHeight = Math.round(targetWidth * (videoHeight / videoWidth));
+      }
+
+      console.log(
+        `Video dimensions: ${videoWidth}x${videoHeight}, Orientation: ${isPortrait ? 'Portrait' : 'Landscape'}`,
+      );
+      console.log(`Target dimensions: ${targetWidth}x${targetHeight}`);
 
       // Set canvas dimensions to our target size
       canvas.width = targetWidth;
