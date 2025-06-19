@@ -328,9 +328,8 @@ export default function PhotoCapture({
             const imageWidth = img.width;
             const imageHeight = img.height;
 
-            // Use fixed width for consistency - 1280px width is standard
+            // Always use width as the fixed dimension (1280px)
             const targetWidth = 1280;
-            // Calculate height maintaining the original aspect ratio
             const targetHeight = Math.round(targetWidth * (imageHeight / imageWidth));
 
             // Create a canvas to resize the image
@@ -407,9 +406,8 @@ export default function PhotoCapture({
       const videoWidth = video.videoWidth;
       const videoHeight = video.videoHeight;
 
-      // Use fixed dimensions for consistency - 1280px width is standard
+      // Always use width as the fixed dimension (1280px)
       const targetWidth = 1280;
-      // Calculate height maintaining the original aspect ratio
       const targetHeight = Math.round(targetWidth * (videoHeight / videoWidth));
 
       console.log(`Video dimensions: ${videoWidth}x${videoHeight}`);
