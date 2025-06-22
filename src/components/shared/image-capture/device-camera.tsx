@@ -74,13 +74,13 @@ const DeviceCamera = forwardRef<DeviceCameraHandle, DeviceCameraProps>(
         const photo = await capturePhoto();
         if (photo?.dataUrl) {
           // Process the photo to resize it
-          const processedDataUrl = await processImageFile(photo.dataUrl, photo.format);
+          //const processedDataUrl = await processImageFile(photo.dataUrl, photo.format);
 
           // Generate filename
           const filename = `Photo-${new Date().toISOString().slice(0, 10)}.${photo.format}`;
 
           // Send back to parent via callback
-          onImageCaptured?.(processedDataUrl, filename);
+          onImageCaptured?.(photo.dataUrl, filename);
         }
       } catch (error) {
         console.error('Error taking or processing photo:', error);

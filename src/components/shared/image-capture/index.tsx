@@ -3,8 +3,11 @@
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 
+import { Button } from '@/components/ui/button';
+import { Camera, Pencil, Trash2, UploadCloud } from 'lucide-react';
 import { type ChangeEvent, useEffect, useRef, useState } from 'react';
 import DeviceCamera, { type DeviceCameraHandle } from './device-camera';
+import ImageCropper from './image-cropper';
 import ImagePreview from './image-preview';
 import { type AspectRatio, getAspectRatioClass } from './image-utils';
 import { UploadArea, type UploadAreaHandle } from './upload-area';
@@ -37,6 +40,8 @@ export default function ImageCapture({
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const { toast } = useToast();
+
+  const [isEditing, setIsEditing] = useState(false);
 
   // Get display text based on photoType
   const displayText = {
@@ -158,15 +163,72 @@ export default function ImageCapture({
         </p>
       </div>
       {photoPreview !== null ? (
-        <ImagePreview
-          aspectRatio={aspectRatio}
-          photoPreview={photoPreview}
-          previewAltText={previewAltText}
-          handleRemovePhoto={handleRemovePhoto}
-          handleTakePhotoClick={handleTakePhotoClick}
-          handleUploadClick={handleUploadClick}
-          showRemoveButton={showRemoveButton}
-        />
+        <>
+          {isEditing ? (
+            <ImageCropper
+              imageUrl={photoPreview}
+              aspectRatio={aspectRatio}
+              onCropComplete={(croppedImageUrl) => {
+                setPhotoPreview(croppedImageUrl);
+                onImageCaptured(croppedImageUrl);
+                setIsEditing(false);
+              }}
+              onCancel={() => setIsEditing(false)}
+            />
+          ) : (
+            <>
+              <ImagePreview
+                aspectRatio={aspectRatio}
+                photoPreview={photoPreview}
+                previewAltText={previewAltText}
+              />
+
+              <div className='flex flex-col items-center gap-2 sm:flex-row sm:justify-center'>
+                <Button
+                  variant='outline'
+                  onClick={() => setIsEditing(true)}
+                  className='w-full sm:w-auto'
+                >
+                  <Pencil className='mr-2 h-4 w-4' />
+                  Edit Photo
+                </Button>
+
+                {uploadOnly && (
+                  <Button
+                    variant='outline'
+                    onClick={handleUploadClick}
+                    className='w-full sm:w-auto'
+                  >
+                    <UploadCloud className='mr-2 h-4 w-4' />
+                    Change via Upload
+                  </Button>
+                )}
+                {!uploadOnly && (
+                  <Button
+                    variant='outline'
+                    onClick={handleTakePhotoClick}
+                    className='w-full sm:w-auto'
+                    //disabled={isCapturing}
+                  >
+                    <Camera className='mr-2 h-4 w-4' />
+                    Take New Photo
+                  </Button>
+                )}
+
+                {showRemoveButton && (
+                  <Button
+                    variant='destructive'
+                    onClick={handleRemovePhoto}
+                    className='w-full sm:w-auto'
+                  >
+                    <Trash2 className='mr-2 h-4 w-4' />
+                    Remove Photo
+                  </Button>
+                )}
+              </div>
+            </>
+          )}
+        </>
       ) : (
         <>
           {uploadOnly && (
