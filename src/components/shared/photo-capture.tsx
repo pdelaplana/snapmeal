@@ -91,7 +91,7 @@ export default function PhotoCapture({
     // Check if we have getUserMedia API
     const hasUserMedia = !!navigator.mediaDevices?.getUserMedia;
     // Check if we're on HTTPS (required for camera in production)
-    const isSecureContext = window.isSecureContext || process.env.NODE_ENV === 'development';
+    const isSecureContext = window?.isSecureContext || process.env.NODE_ENV === 'development';
 
     return hasUserMedia && isSecureContext;
   };

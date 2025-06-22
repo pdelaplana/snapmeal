@@ -5,6 +5,8 @@ import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/context/auth-context';
 import { MealLogProvider } from '@/context/meal-log-context';
 
+import { PwaElementsProvider } from '@/components/providers/pwa-elements-provider';
+
 export const metadata: Metadata = {
   title: 'SnapMeal',
   description: 'Log your meals by taking pictures and estimate calories & macros.',
@@ -31,8 +33,10 @@ export default function RootLayout({
         <ReactQueryProvider>
           <AuthProvider>
             <MealLogProvider>
-              {children}
-              <Toaster />
+              <PwaElementsProvider>
+                {children}
+                <Toaster />
+              </PwaElementsProvider>
             </MealLogProvider>
           </AuthProvider>
         </ReactQueryProvider>

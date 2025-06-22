@@ -5,7 +5,7 @@ import {
   estimateCaloriesMacros,
 } from '@/ai/flows/estimate-calories-macros';
 import MealEstimation from '@/components/meal/meal-estimation';
-import PhotoCapture from '@/components/shared/photo-capture';
+import ImageCapture from '@/components/shared/image-capture';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -323,9 +323,9 @@ export default function MealForm({
 
   return (
     <div className='space-y-10'>
-      <PhotoCapture
-        onPhotoCaptured={handlePhotoCaptured}
-        initialPhotoDataUri={photoDataUri}
+      <ImageCapture
+        onImageCaptured={handlePhotoCaptured}
+        initialImageDataUri={photoDataUri}
         photoType='meal'
       />
 

@@ -1,7 +1,7 @@
 'use client';
 
 import AppLayout from '@/components/layout/app-layout';
-import PhotoCapture from '@/components/shared/photo-capture';
+import ImageCapture from '@/components/shared/image-capture';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -101,9 +101,9 @@ export default function ProfilePage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <PhotoCapture
-                  onPhotoCaptured={profilePhotoUpdateHandler}
-                  initialPhotoDataUri={user?.photoURL || null}
+                <ImageCapture
+                  onImageCaptured={profilePhotoUpdateHandler}
+                  initialImageDataUri={user?.photoURL || null}
                   photoType='profile'
                   aspectRatio='square'
                   labelText='Profile Picture'
