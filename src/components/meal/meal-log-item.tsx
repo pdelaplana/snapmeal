@@ -53,7 +53,7 @@ export default function MealLogItem({ meal }: MealLogItemProps) {
     <Card className='overflow-hidden shadow-lg transition-all hover:shadow-xl'>
       <CardHeader className='relative p-0'>
         {meal.photoDataUri && (
-          <div className='aspect-video w-full overflow-hidden'>
+          <div className='aspect-[4/3] w-full overflow-hidden'>
             <Image
               src={meal.photoDataUri}
               alt='Meal photo'
@@ -132,15 +132,6 @@ export default function MealLogItem({ meal }: MealLogItemProps) {
                 </Badge>
               ))}
             </div>
-          </div>
-        )}
-
-        {meal.notes && (
-          <div className='mt-3'>
-            <p className='text-xs font-medium text-foreground'>Notes:</p>
-            <p className='text-xs text-muted-foreground whitespace-pre-wrap break-words'>
-              {meal.notes}
-            </p>
           </div>
         )}
       </CardContent>

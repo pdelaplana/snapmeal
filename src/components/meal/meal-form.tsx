@@ -71,7 +71,7 @@ export default function MealForm({
   const [selectedMealType, setSelectedMealType] = useState<Meal['mealType'] | undefined>(undefined);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedTime, setSelectedTime] = useState<string>(format(new Date(), 'HH:mm'));
-  const [showManualInputs, setShowManualInputs] = useState(true);
+  const [showManualInputs, setShowManualInputs] = useState(false);
 
   // Manual nutrition entries
   const [manualCalories, setManualCalories] = useState<string>('');
@@ -457,7 +457,8 @@ export default function MealForm({
                   type='time'
                   value={selectedTime}
                   onChange={(e) => setSelectedTime(e.target.value)}
-                  className='mt-2'
+                  className='mt-2 text-left'
+                  style={{ textAlignLast: 'left', direction: 'ltr' } /* Ensures left alignment */}
                 />
               </div>
             </div>

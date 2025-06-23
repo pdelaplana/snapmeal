@@ -48,7 +48,7 @@ export default function ImageCropper({
 
   return (
     <div className='flex flex-col h-full'>
-      <div className='relative flex-grow' style={{ height: '70vh' }}>
+      <div className='relative flex-grow' style={{ height: '40vh' }}>
         <Cropper
           image={imageUrl}
           crop={crop}
