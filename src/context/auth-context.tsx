@@ -1,6 +1,7 @@
 'use client';
 
 import { addUserAccount, fetchUserAccount } from '@/actions';
+import { setUserContext } from '@/components/shared/sentry-error-boundary';
 import { auth, db } from '@/lib/firebase';
 import type { AuthError, User } from 'firebase/auth'; // Using Firebase User type directly
 import {
@@ -9,7 +10,6 @@ import {
   signInWithEmailAndPassword,
   updateProfile,
 } from 'firebase/auth';
-import { doc, updateDoc } from 'firebase/firestore';
 import {
   type ReactNode,
   createContext,
@@ -164,6 +164,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     [user],
   );
+
+  useEffect(() => {
+    // Set Sentry user context when user state changes
+    if (user) {
+      setUserContext({
+        id: user.uid, // Firebase User uses 'uid' instead of 'id'
+        email: user.email || undefined,
+        username: user.displayName || undefined,
+      });
+    }
+  }, [user]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {

@@ -43,6 +43,9 @@ env:
   - variable: NEXT_PUBLIC_ENABLE_SHARING_FEATURE
     value: false # Set to true or false based on your feature flag
 
+  - variable: NEXT_PUBLIC_SENTRY_DSN
+    value: https://60f0658983401e8631f054c189ed78dd@o4509115240022016.ingest.us.sentry.io/4509546842750976 # Replace with your actual Sentry DSN
+    
   - variable: FIREBASE_ADMIN_SECRET_NAME
     value: firebase-admin-sdk-credentials # Replace with your actual Firebase Admin SDK secret name
 
