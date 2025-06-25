@@ -7,7 +7,6 @@ import { MealLogProvider } from '@/context/meal-log-context';
 
 import { PwaElementsProvider } from '@/components/providers/pwa-elements-provider';
 import { SentryErrorBoundary } from '@/components/shared/sentry-error-boundary';
-import { Button } from '@/components/ui/button';
 
 export const metadata: Metadata = {
   title: 'SnapMeal',
@@ -24,11 +23,9 @@ export default function RootLayout({
     <div className="flex min-h-screen flex-col items-center justify-center p-4 text-center">
       <h2 className="mb-2 text-2xl font-bold">Something went wrong</h2>
       <p className="mb-4 text-muted-foreground">
-        We've been notified about this issue and will fix it as soon as possible.
+        We've been notified about this issue and will fix it as soon as possible.  Refresh this page to try again.
       </p>
-      <Button onClick={() => window.location.reload()}>
-        Try Again
-      </Button>
+
     </div>
   );
   return (

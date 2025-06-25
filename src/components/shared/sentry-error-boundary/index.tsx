@@ -15,11 +15,12 @@ export function SentryErrorBoundary({ children, fallback }: ErrorBoundaryProps) 
   );
 }
 
+// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 export function captureException(error: unknown, context?: Record<string, any>) {
-  Sentry.captureException(error, { 
-    contexts: { 
-      custom: context 
-    } 
+  Sentry.captureException(error, {
+    contexts: {
+      custom: context
+    }
   });
 }
 
