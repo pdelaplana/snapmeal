@@ -1,7 +1,9 @@
 'use server';
 
 import { db } from '@/lib/firebase-admin';
+import { withSentryServerAction } from '@/lib/sentry-server-action';
 import type { Meal } from '@/types';
+import * as Sentry from '@sentry/nextjs';
 
 interface FetchMealsResult {
   meals: Meal[];
@@ -9,10 +11,11 @@ interface FetchMealsResult {
   lastCursor: string | null; // Field value (date) for cursor
   hasMore: boolean;
 }
+
 /**
- * Server action to fetch paginated meals for a specific user
+ * Implementation of the fetchMealsByUserId server action
  */
-export async function fetchMealsByUserId(
+async function fetchMealsByUserIdImplementation(
   userId: string,
   limit = 10,
   cursorData: { docId: string | null; date: string | null } | null = null,
@@ -20,6 +23,25 @@ export async function fetchMealsByUserId(
   if (!userId) throw new Error('User ID is required');
 
   try {
+    // Set user context for debugging
+    Sentry.setUser({ id: userId });
+
+    // Set pagination tags for filtering in Sentry dashboard
+    Sentry.setTag('limit', String(limit));
+    Sentry.setTag('hasCursor', cursorData ? 'true' : 'false');
+
+    // Add breadcrumb for tracking action flow
+    Sentry.addBreadcrumb({
+      category: 'meals.fetch',
+      message: 'Fetching meals for user',
+      level: 'info',
+      data: {
+        limit,
+        hasCursor: Boolean(cursorData),
+        cursorDocId: cursorData?.docId || 'none',
+      },
+    });
+
     let query = db
       .collection('users')
       .doc(userId)
@@ -42,6 +64,11 @@ export async function fetchMealsByUserId(
     const snapshot = await query.get();
 
     if (snapshot.empty) {
+      Sentry.addBreadcrumb({
+        category: 'meals.fetch',
+        message: 'No meals found',
+        level: 'info',
+      });
       return { meals: [], lastDocId: null, lastCursor: null, hasMore: false };
     }
 
@@ -64,9 +91,20 @@ export async function fetchMealsByUserId(
     });
 
     // Get the last document for the next cursor
-    const lastDoc = snapshot.docs[snapshot.docs.length - 1];
+    const lastDoc = hasMore ? snapshot.docs[limit - 1] : snapshot.docs[snapshot.docs.length - 1];
     const lastDocId = lastDoc?.id || null;
     const lastDate = lastDoc?.data().date?.toDate().toISOString() || null;
+
+    // Add success breadcrumb with result stats
+    Sentry.addBreadcrumb({
+      category: 'meals.fetch',
+      message: 'Meals fetched successfully',
+      level: 'info',
+      data: {
+        count: meals.length,
+        hasMore,
+      },
+    });
 
     return {
       meals,
@@ -81,3 +119,12 @@ export async function fetchMealsByUserId(
     );
   }
 }
+
+/**
+ * Server action to fetch paginated meals for a specific user
+ * Wrapped with Sentry monitoring
+ */
+export const fetchMealsByUserId = withSentryServerAction(
+  'fetchMealsByUserId',
+  fetchMealsByUserIdImplementation,
+);

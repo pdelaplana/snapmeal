@@ -8,19 +8,15 @@ interface ErrorBoundaryProps {
 }
 
 export function SentryErrorBoundary({ children, fallback }: ErrorBoundaryProps) {
-  return (
-    <Sentry.ErrorBoundary fallback={() => <>{fallback}</>}>
-      {children}
-    </Sentry.ErrorBoundary>
-  );
+  return <Sentry.ErrorBoundary fallback={() => <>{fallback}</>}>{children}</Sentry.ErrorBoundary>;
 }
 
 // biome-ignore lint/suspicious/noExplicitAny: <explanation>
 export function captureException(error: unknown, context?: Record<string, any>) {
   Sentry.captureException(error, {
     contexts: {
-      custom: context
-    }
+      custom: context,
+    },
   });
 }
 

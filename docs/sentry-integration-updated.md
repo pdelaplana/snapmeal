@@ -1,4 +1,4 @@
-# Sentry Integration for SnapMeal
+# Sentry Integration for SnapMeal (Updated)
 
 This document outlines the Sentry integration in the SnapMeal application for monitoring, error tracking, and performance measurement.
 
@@ -17,6 +17,18 @@ This document outlines the Sentry integration in the SnapMeal application for mo
 3. **API Route Monitoring**
    - API routes are instrumented for error tracking and performance monitoring
    - Request/response details are captured for debugging
+
+## Integrated Server Actions
+
+The following server actions have Sentry integration:
+
+- `addMeal` - Tracks meal creation with user context and performance metrics
+- `updateMeal` - Monitors meal updates with detailed context
+- `deleteMeal` - Tracks meal deletion operations including batch transactions
+- `addUserAccount` - Monitors user account creation with breadcrumbs
+- `fetchUserAccount` - Tracks user profile retrieval
+- `fetchMealById` - Monitors single meal retrieval with error handling
+- `fetchMealsByUserId` - Tracks paginated meal list retrieval with performance metrics
 
 ## Using Sentry in Server Actions
 
@@ -75,9 +87,24 @@ The Sentry dashboard provides:
 The Sentry DSN is configured in the environment:
 - `NEXT_PUBLIC_SENTRY_DSN`: The Sentry project Data Source Name
 
+## Testing Sentry Integration
+
+The application includes test routes to verify Sentry integration:
+
+1. **Test Page**: Visit `/sentry-test` to access a test UI
+   - Test frontend error capturing
+   - Test API integration
+   - Simulate errors and monitor results
+
+2. **Test API Endpoint**: Call `/api/sentry-test` to test server-side integration
+   - GET: Test normal operation with performance tracking
+   - POST: Test error handling
+
 ## Best Practices
 
 1. Always wrap server actions with `withSentryServerAction`
 2. Add relevant user and operation context
 3. Use breadcrumbs to track operation flow
 4. Set meaningful tags for easier filtering
+5. Keep PII (Personally Identifiable Information) out of error reports
+6. Capture errors with additional context

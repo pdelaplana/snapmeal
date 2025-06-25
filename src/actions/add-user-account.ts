@@ -1,8 +1,9 @@
 'use server';
 
 import { db } from '@/lib/firebase-admin';
+import { withSentryServerAction } from '@/lib/sentry-server-action';
 import type { UserAccount } from '@/types';
-import { add } from 'date-fns';
+import * as Sentry from '@sentry/nextjs';
 import { Timestamp } from 'firebase-admin/firestore';
 
 interface AddUserAccountDTO {
@@ -13,16 +14,24 @@ interface AddUserAccountDTO {
 }
 
 /**
- * Server action to create a new user account in Firestore
+ * Implementation of the addUserAccount server action
  * @param input - User account creation data
  * @returns The created user account
  * @throws Error if there's a server error or if required fields are missing
  */
-export async function addUserAccount(addUserAccountDTO: AddUserAccountDTO): Promise<UserAccount> {
+async function addUserAccountImplementation(
+  addUserAccountDTO: AddUserAccountDTO,
+): Promise<UserAccount> {
   if (!addUserAccountDTO.userId) throw new Error('User ID is required');
   if (!addUserAccountDTO.email) throw new Error('Email is required');
 
   try {
+    // Set user context for debugging
+    Sentry.setUser({ id: addUserAccountDTO.userId });
+
+    // Set custom tags for filtering in Sentry dashboard
+    Sentry.setTag('email', addUserAccountDTO.email);
+
     // Check if user document already exists
     const userRef = db.collection('users').doc(addUserAccountDTO.userId);
     const userDoc = await userRef.get();
@@ -45,6 +54,16 @@ export async function addUserAccount(addUserAccountDTO: AddUserAccountDTO): Prom
     // Save to Firestore
     await userRef.set(userAccount);
 
+    // Add breadcrumb for successful account creation
+    Sentry.addBreadcrumb({
+      category: 'user.account',
+      message: 'User account created successfully',
+      level: 'info',
+      data: {
+        userId: addUserAccountDTO.userId,
+      },
+    });
+
     // Return the created account with ID
     return {
       id: userRef.id,
@@ -60,3 +79,12 @@ export async function addUserAccount(addUserAccountDTO: AddUserAccountDTO): Prom
     );
   }
 }
+
+/**
+ * Server action to create a new user account in Firestore
+ * Wrapped with Sentry monitoring
+ */
+export const addUserAccount = withSentryServerAction(
+  'addUserAccount',
+  addUserAccountImplementation,
+);

@@ -28,7 +28,7 @@ export function withSentryServerAction<
         hasData: args.length > 0,
       },
     });
-
+      
     // Use startSpan for performance monitoring and execute the function within its context
     return Sentry.startSpan(
       { name: `server.action.${actionName}`, op: 'server.action' },
@@ -36,10 +36,10 @@ export function withSentryServerAction<
         try {
           // Measure execution time manually
           const startTime = performance.now();
-
+          
           // Execute the original function
           const result = await fn(...args);
-
+          
           // Record execution time
           const duration = performance.now() - startTime;
 
@@ -72,7 +72,7 @@ export function withSentryServerAction<
           // Re-throw the error so it can be handled by the caller
           throw error;
         }
-      },
+      }
     );
   }) as T;
 }
