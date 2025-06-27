@@ -12,15 +12,25 @@ interface FetchMealsResult {
   hasMore: boolean;
 }
 
+interface PaginationParams {
+  pageParam?: {
+    docId?: string;
+    date?: string; // Optional date for cursor
+  };
+}
+
 /**
  * Implementation of the fetchMealsByUserId server action
  */
+
 async function fetchMealsByUserIdImplementation(
   userId: string,
   limit = 10,
-  cursorData: { docId: string | null; date: string | null } | null = null,
+  data: unknown = null,
 ): Promise<FetchMealsResult> {
   if (!userId) throw new Error('User ID is required');
+
+  const { pageParam } = data as PaginationParams;
 
   try {
     // Set user context for debugging
@@ -28,7 +38,7 @@ async function fetchMealsByUserIdImplementation(
 
     // Set pagination tags for filtering in Sentry dashboard
     Sentry.setTag('limit', String(limit));
-    Sentry.setTag('hasCursor', cursorData ? 'true' : 'false');
+    Sentry.setTag('hasCursor', data ? 'true' : 'false');
 
     // Add breadcrumb for tracking action flow
     Sentry.addBreadcrumb({
@@ -37,8 +47,8 @@ async function fetchMealsByUserIdImplementation(
       level: 'info',
       data: {
         limit,
-        hasCursor: Boolean(cursorData),
-        cursorDocId: cursorData?.docId || 'none',
+        hasCursor: Boolean(pageParam),
+        cursorDocId: pageParam?.docId || 'none',
       },
     });
 
@@ -50,15 +60,30 @@ async function fetchMealsByUserIdImplementation(
       .limit(limit + 1);
 
     // Apply cursor if provided (for pagination)
-    if (cursorData?.docId && cursorData?.date) {
-      // We need to get a reference to the actual document for startAfter
-      //const docRef = db.collection('users').doc(userId).collection('meals').doc(cursorData.docId);
-      //const cursorDoc = await docRef.get();
+    if (pageParam?.docId) {
+      // Use the document reference approach
+      const docRef = db.collection('users').doc(userId).collection('meals').doc(pageParam?.docId);
+      const cursorDoc = await docRef.get();
 
-      //if (cursorDoc.exists) {
-      //  query = query.startAfter(cursorDoc);
-      //}
-      query = query.startAfter(new Date(cursorData.date), cursorData.docId);
+      if (cursorDoc.exists) {
+        query = query.startAfter(cursorDoc);
+
+        // Add breadcrumb for debugging
+        Sentry.addBreadcrumb({
+          category: 'meals.fetch.pagination',
+          message: 'Using cursor for pagination',
+          level: 'debug',
+          data: { cursorDocId: pageParam?.docId },
+        });
+      } else {
+        // Log the issue for debugging
+        Sentry.addBreadcrumb({
+          category: 'meals.fetch.pagination',
+          message: 'Cursor document not found',
+          level: 'warning',
+          data: { cursorDocId: pageParam?.docId },
+        });
+      }
     }
 
     const snapshot = await query.get();
