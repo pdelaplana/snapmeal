@@ -1,0 +1,125 @@
+# Claude Code Development Container
+FROM node:20-bullseye
+
+# Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive
+ENV DEVCONTAINER=true
+ENV SHELL=/bin/bash
+
+# Create a non-root user
+ARG USERNAME=developer
+ARG USER_UID=1000
+ARG USER_GID=$USER_UID
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    wget \
+    ripgrep \
+    fd-find \
+    nano \
+    vim \
+    zsh \
+    sudo \
+    build-essential \
+    python3 \
+    python3-pip \
+    ca-certificates \
+    gnupg \
+    lsb-release \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create the user
+RUN groupadd --gid $USER_GID $USERNAME \
+    && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
+    && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
+    && chmod 0440 /etc/sudoers.d/$USERNAME
+
+# Install git-delta for better git diffs
+RUN ARCH=$(dpkg --print-architecture) && \
+    wget "https://github.com/dandavison/delta/releases/download/0.18.2/git-delta_0.18.2_${ARCH}.deb" && \
+    dpkg -i "git-delta_0.18.2_${ARCH}.deb" && \
+    rm "git-delta_0.18.2_${ARCH}.deb"
+
+# Set up command history persistence
+RUN SNIPPET="export PROMPT_COMMAND='history -a' && export HISTFILE=/commandhistory/.bash_history" \
+    && mkdir /commandhistory \
+    && touch /commandhistory/.bash_history \
+    && chown -R $USERNAME /commandhistory
+
+# Switch to non-root user
+USER $USERNAME
+
+# Set up npm global packages directory for the user
+RUN mkdir -p ~/.npm-global \
+    && npm config set prefix ~/.npm-global \
+    && echo 'export PATH=~/.npm-global/bin:$PATH' >> ~/.bashrc \
+    && echo 'export PATH=~/.npm-global/bin:$PATH' >> ~/.zshrc
+
+# Install Claude Code globally
+RUN export PATH=~/.npm-global/bin:$PATH && \
+    npm install -g @anthropic-ai/claude-code
+
+# Create workspace and config directories
+RUN mkdir -p /home/$USERNAME/workspace /home/$USERNAME/.claude
+
+# Set up git configuration (placeholder - users should override)
+RUN git config --global user.name "Developer" && \
+    git config --global user.email "developer@example.com" && \
+    git config --global init.defaultBranch main
+
+# Install oh-my-zsh for better shell experience (optional)
+RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+
+# Set working directory
+WORKDIR /home/$USERNAME/workspace
+
+# Add helpful aliases
+RUN echo 'alias ll="ls -alF"' >> ~/.bashrc && \
+    echo 'alias la="ls -A"' >> ~/.bashrc && \
+    echo 'alias l="ls -CF"' >> ~/.bashrc && \
+    echo 'export PATH=~/.npm-global/bin:$PATH' >> ~/.bashrc
+
+# Create a helpful startup script
+RUN echo '#!/bin/bash\n\
+echo "🤖 Claude Code Development Container"\n\
+echo ""\n\
+echo "Available commands:"\n\
+echo "  claude          - Start Claude Code"\n\
+echo "  claude doctor   - Check Claude Code installation"\n\
+echo "  claude --help   - Show Claude Code help"\n\
+echo ""\n\
+echo "Your workspace is mounted at: $(pwd)"\n\
+echo ""\n\
+if [ ! -f ~/.anthropic_api_key ] && [ -z "$ANTHROPIC_API_KEY" ]; then\n\
+    echo "⚠️  To use Claude Code, you need to authenticate:"\n\
+    echo "   1. Set ANTHROPIC_API_KEY environment variable, or"\n\
+    echo "   2. Run: claude auth"\n\
+    echo ""\n\
+fi\n\
+echo "Happy coding! 🚀"\n\
+echo ""' > ~/.startup.sh && chmod +x ~/.startup.sh
+
+# Set bash as default shell and run startup script
+RUN echo 'source ~/.startup.sh' >> ~/.bashrc
+
+# Expose any ports you might need (optional)
+# EXPOSE 3000 8000 8080
+
+# Default command
+CMD ["/bin/bash"]
+
+# Build instructions:
+# docker build -t claude-image .
+#
+# Run instructions:
+# docker run -it --rm -v "$(pwd):/home/developer/workspace" claude-image
+#
+# For Windows PowerShell:
+# docker run -it --rm -v "${PWD}:/home/developer/workspace" claude-image
+#
+# Environment variables you can pass:
+# -e ANTHROPIC_API_KEY=your_api_key_here
+# -e GIT_AUTHOR_NAME="Your Name" 
+# -e GIT_AUTHOR_EMAIL="your.email@example.com"

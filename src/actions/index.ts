@@ -5,3 +5,4 @@ export { fetchMealsByUserId } from './fetch-meals-by-userid';
 export { fetchMealById } from './fetch-meal-by-id';
 export { fetchUserAccount } from './fetch-user-account';
 export { addUserAccount } from './add-user-account';
+export { exportData } from './export-data';

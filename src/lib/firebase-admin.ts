@@ -1,5 +1,7 @@
 import { cert, getApps, initializeApp } from 'firebase-admin/app';
+import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
+import { getFunctions } from 'firebase-admin/functions';
 
 async function getServiceAccountCredentials() {
   // For local development, you can still use the local file
@@ -50,4 +52,7 @@ async function initializeFirebaseAdmin() {
 
 export const firebaseAdminApp = await initializeFirebaseAdmin();
 
+export const auth = getAuth(firebaseAdminApp);
+
 export const db = getFirestore(firebaseAdminApp, 'development');
+export const functions = getFunctions(firebaseAdminApp);

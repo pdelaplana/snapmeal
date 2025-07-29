@@ -2,6 +2,7 @@
 
 import AppLayout from '@/components/layout/app-layout';
 import ImageCapture from '@/components/shared/image-capture';
+import { ExportDataButton } from '@/components/profile/export-data-button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -164,6 +165,11 @@ export default function ProfilePage() {
                 <div className='flex items-center justify-between rounded-lg p-3 hover:bg-muted/30'>
                   <span>Notification Settings</span>
                   <span className='text-xs'>Not available</span>
+                </div>
+                <Separator />
+                <div className='flex items-center justify-between rounded-lg p-3 hover:bg-muted/30'>
+                  <span>Export Your Data</span>
+                  <ExportDataButton userId={user.uid} />
                 </div>
               </div>
             </CardContent>
