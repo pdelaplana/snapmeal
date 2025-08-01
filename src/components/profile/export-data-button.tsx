@@ -17,12 +17,12 @@ interface ExportDataButtonProps {
  * Component for exporting user data
  * Handles the export process with loading states and user feedback
  */
-export function ExportDataButton({ 
-  userId, 
-  variant = 'ghost', 
+export function ExportDataButton({
+  userId,
+  variant = 'ghost',
   size = 'sm',
   className = '',
-  showText = false 
+  showText = false,
 }: ExportDataButtonProps) {
   const { toast } = useToast();
   const exportMutation = useExportDataMutation();
@@ -32,7 +32,7 @@ export function ExportDataButton({
       onSuccess: () => {
         toast({
           title: 'Export Started',
-          description: 'Your data export has been queued. You\'ll receive an email when it\'s ready.',
+          description: "Your data export has been queued. You'll receive an email when it's ready.",
         });
       },
       onError: (error) => {
@@ -54,14 +54,12 @@ export function ExportDataButton({
       className={className}
     >
       {exportMutation.isPending ? (
-        <Loader2 className="h-4 w-4 animate-spin" />
+        <Loader2 className='h-4 w-4 animate-spin' />
       ) : (
-        <Download className="h-4 w-4" />
+        <Download className='h-4 w-4' />
       )}
       {showText && (
-        <span className="ml-2">
-          {exportMutation.isPending ? 'Exporting...' : 'Export Data'}
-        </span>
+        <span className='ml-2'>{exportMutation.isPending ? 'Exporting...' : 'Export Data'}</span>
       )}
     </Button>
   );

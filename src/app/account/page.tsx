@@ -15,6 +15,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/context/auth-context';
+import { useDeleteAccountMutation } from '@/hooks/mutations';
 import { useToast } from '@/hooks/use-toast';
 import { Key, LogOut, ShieldAlert, Trash2, UserCog } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -23,6 +24,7 @@ export default function AccountManagementPage() {
   const { user, logout } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
+  const deleteAccountMutation = useDeleteAccountMutation();
 
   const logoutHandler = async () => {
     const result = await logout(); // Call the server action
@@ -39,6 +41,39 @@ export default function AccountManagementPage() {
         variant: 'destructive',
         title: 'Logout Failed',
         description: 'Could not log out.',
+      });
+    }
+  };
+
+  const deleteAccountHandler = async () => {
+    if (!user?.uid) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'User ID not found.',
+      });
+      return;
+    }
+
+    try {
+      await deleteAccountMutation.mutateAsync(user.uid);
+
+      toast({
+        title: 'Account Deleted',
+        description: 'Your account has been successfully deleted.',
+      });
+
+      // Log out the user after successful deletion
+      const logoutResult = await logout();
+      if (logoutResult) {
+        router.push('/login');
+      }
+    } catch (error) {
+      console.error('Delete account error:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Deletion Failed',
+        description: 'Failed to delete your account. Please try again.',
       });
     }
   };
@@ -74,11 +109,40 @@ export default function AccountManagementPage() {
                 <span className='ml-auto text-xs text-muted-foreground'>(Not available)</span>
               </Button>
 
-              <Button variant='destructive_outline_mock' className='w-full justify-start' disabled>
-                <Trash2 className='mr-3 h-5 w-5 text-muted-foreground' />
-                <span>Delete Account</span>
-                <span className='ml-auto text-xs text-muted-foreground'>(Not available)</span>
-              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant='destructive'
+                    className='w-full justify-start'
+                    disabled={deleteAccountMutation.isPending}
+                  >
+                    <Trash2 className='mr-3 h-5 w-5' />
+                    <span>Delete Account</span>
+                    {deleteAccountMutation.isPending && (
+                      <span className='ml-auto text-xs'>Processing...</span>
+                    )}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This action cannot be undone. This will permanently delete your account and
+                      remove all your data from our servers, including all your meal logs and
+                      photos.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={deleteAccountHandler}
+                      className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
+                    >
+                      Delete Account
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
 
             <div className='mt-6 border-t pt-6'>
