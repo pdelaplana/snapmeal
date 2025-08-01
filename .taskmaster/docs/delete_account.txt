@@ -1,0 +1,160 @@
+# Product Requirements Document: Delete Account Feature
+
+## Overview
+Implementation of account deletion functionality for SnapMeal, enabling users to permanently delete their accounts and all associated data through a secure, multi-step confirmation process.
+
+## Objective  
+Provide users with the ability to permanently delete their SnapMeal accounts while ensuring data privacy compliance, preventing accidental deletions, and maintaining system security.
+
+## Context
+### Current System
+SnapMeal is a Next.js 15 PWA for meal logging with AI-powered nutritional analysis, built with Firebase backend services. Users can create accounts, log meals with photos, and track nutritional data. The application uses Firebase Auth for authentication, Firestore for data storage, and Firebase Storage for meal photos.
+
+### User Problem
+Users need the ability to permanently remove their accounts and all associated personal data from the platform for privacy reasons, account management, or when they no longer wish to use the service. Without this functionality, users must contact support for manual account deletion.
+
+### Business Impact
+- **Regulatory Compliance**: Meets GDPR, CCPA, and privacy regulation requirements
+- **User Trust**: Demonstrates commitment to user privacy and data ownership  
+- **Reduced Support Load**: Eliminates manual deletion requests
+- **Data Governance**: Reduces storage costs and data liability
+
+## Requirements
+### Functional Requirements
+- User can delete their account from the Account Management page
+- Multi-step confirmation dialog prevents accidental deletion
+- All user data (profile, meals, photos) permanently removed from system
+- Automatic logout and session termination after successful deletion
+- Clear success/error feedback via toast notifications
+- Loading states during deletion process
+
+### Non-Functional Requirements
+- Performance: Deletion completes within 30 seconds for user feedback
+- Security: Server-side validation of user permissions required
+- Scalability: Background job processing for large data deletion
+- Compatibility: Works across all supported browsers and devices
+
+## Constraints
+### Technical Constraints
+- Must use existing Firebase Admin SDK for server-side operations
+- Integrate with current React Query state management pattern
+- Follow existing Next.js server action architecture
+- Use Shadcn/ui components for consistent styling
+
+### Business Constraints
+- Implementation completed within existing development sprint
+- No additional third-party services required
+- Must maintain existing performance standards
+
+## User Stories
+### Primary User Story
+**As a** SnapMeal user
+**I want** to delete my account permanently
+**So that** I can remove all my personal data from the platform
+
+**Acceptance Criteria:**
+- [ ] User can access delete account function from Account Management page
+- [ ] System displays clear warning about permanent data loss
+- [ ] User must explicitly confirm deletion through dialog
+- [ ] All user data is permanently deleted from Firebase
+- [ ] User is automatically logged out after successful deletion
+- [ ] User receives confirmation feedback via toast notification
+
+### Secondary User Stories
+**As a** SnapMeal user
+**I want** to receive clear feedback if account deletion fails
+**So that** I understand what went wrong and can take appropriate action
+
+**As a** SnapMeal user
+**I want** to be protected from accidental account deletion
+**So that** I don't lose my data unintentionally
+
+## Technical Approach
+### Architecture Overview
+Frontend uses React Query mutation hook pattern with optimistic updates. Backend implements Next.js server action with Firebase Admin SDK for comprehensive data deletion. UI components follow existing Shadcn/ui patterns with destructive styling for safety.
+
+### Implementation Details
+- **Hook**: `useDeleteAccountMutation()` in `src/hooks/mutations/use-delete-account.ts`
+- **UI**: Enhanced Account Management page (`src/app/account/page.tsx`)
+- **Dialog**: AlertDialog component with confirmation flow
+- **Server Action**: `deleteAccount()` in `src/actions/delete-account.ts`
+- **Data Scope**: User profile, meal logs, photos, preferences, query cache
+
+### Dependencies
+- Firebase Admin SDK for server-side operations
+- React Query for state management
+- Next.js server actions framework
+- Shadcn/ui AlertDialog component
+- Background job processing system
+
+## Testing Strategy
+### Unit Testing
+Test mutation hook functionality, error handling, and state management.
+
+### Integration Testing  
+Test complete deletion flow from UI trigger to backend processing.
+
+### User Testing
+Validate confirmation dialog clarity and user understanding of consequences.
+
+## Success Metrics
+### Primary Metrics
+- Completion Rate: >95% of users who complete deletion after starting
+- Error Rate: <2% of deletion attempts fail
+- Time to Complete: Average <15 seconds from initiation to feedback
+
+### Secondary Metrics
+- Support Ticket Reduction: 100% elimination of manual deletion requests
+- User Feedback: Positive feedback on deletion process clarity
+- Compliance: 100% GDPR/CCPA request fulfillment rate
+
+## Timeline & Milestones
+### Phase 1: Implementation (Completed)
+- React Query mutation hook
+- Account Management page integration
+- Confirmation dialog with proper styling
+- Server action integration
+
+### Phase 2: Testing & Deployment (Pending)
+- Unit and integration testing
+- Security audit
+- QA testing approval
+- Production deployment
+
+## Risks & Mitigation
+### Technical Risks
+- Partial data deletion: Comprehensive testing and background job system
+- Database consistency issues: Transaction-based deletion with rollback procedures
+- Performance impact: Background processing and queue system
+
+### Business Risks
+- Accidental deletion: Multi-step confirmation and clear warnings
+- Compliance violations: Legal review and comprehensive deletion audit
+- User confusion: Clear messaging and intuitive UI design
+
+## Open Questions
+- Should we implement a grace period for account recovery?
+- Do we need data export functionality before deletion?
+- What analytics should we track for deletion patterns?
+
+---
+
+## Implementation Status
+
+### Completed ✅
+- [x] React Query mutation hook implementation
+- [x] Account Management page integration  
+- [x] Confirmation dialog with proper styling
+- [x] Server action integration
+- [x] Error handling and user feedback
+- [x] Automatic logout and redirect
+
+### Pending 📋
+- [ ] Unit tests for mutation hook
+- [ ] Integration tests for deletion flow
+- [ ] E2E tests for complete user journey
+- [ ] Security audit completion
+- [ ] QA testing approval
+
+## Task Master Integration
+This PRD can be parsed with `task-master parse-prd .taskmaster/docs/delete_account.txt` to generate implementation tasks.
