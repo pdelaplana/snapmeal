@@ -12,7 +12,11 @@
     "typecheck": "tsc --noEmit",
     "biome:check": "biome check .",
     "biome:format": "biome format --write .",
-    "version:bump-build": "node scripts/update-build-number.mjs"
+    "version:bump-build": "node scripts/update-build-number.mjs",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@capacitor/camera": "^7.0.1",
@@ -69,13 +73,19 @@
     "@biomejs/biome": "^1.9.4",
     "@capacitor/cli": "^7.4.0",
     "@tanstack/react-query-devtools": "^5.80.6",
+    "@testing-library/jest-dom": "^6.1.4",
+    "@testing-library/react": "^14.1.2",
+    "@testing-library/user-event": "^14.5.1",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "@types/uuid": "^10.0.0",
+    "@vitejs/plugin-react": "^4.2.0",
     "genkit-cli": "^1.8.0",
+    "jsdom": "^23.0.1",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^1.0.4"
   }
 }

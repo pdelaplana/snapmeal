@@ -571,6 +571,12 @@ npm run biome:format     # Format code
 npm run biome:check      # Lint and format check
 npm run build           # Production build
 
+# Testing
+npm run test            # Run tests in watch mode
+npm run test:run        # Run tests once
+npm run test:ui         # Run tests with UI interface
+npm run test:coverage   # Run tests with coverage report
+
 # AI Development
 npm run genkit:dev       # Start Genkit AI development server
 npm run genkit:watch     # Watch mode for AI development

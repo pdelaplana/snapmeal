@@ -2,6 +2,46 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 🚨 IMPORTANT: Workspace Setup
+
+**ALWAYS START HERE when beginning a new session:**
+
+1. **Navigate to SnapMeal workspace:**
+   ```bash
+   cd /home/developer/workspace
+   pwd  # Should show: /home/developer/workspace
+   ```
+
+2. **Verify you're in the correct project:**
+   - Look for `package.json` with SnapMeal project
+   - Check for `src/` directory with Next.js app structure
+   - Confirm `.taskmaster/` directory exists with PRDs and templates
+
+3. **Check MCP server status:**
+   ```bash
+   claude mcp list
+   # Should show: context7 ✓ Connected, taskmaster-ai ✓ Connected
+   ```
+
+4. **Reference key files:**
+   - `SYSTEM_INSTRUCTIONS.md` - Complete development guidance
+   - `.taskmaster/docs/` - PRDs for implemented features
+   - `docs/mcp-server-setup.md` - MCP server configuration guide
+
+5. **🧪 PENDING: Unit Testing Implementation**
+   - **Status**: Phase 1.1 complete, Phase 1.2+ pending
+   - **Framework**: Vitest configured and ready
+   - **Next Tasks**: Complete test utilities setup, resolve npm dependencies
+   - **PRD**: See `.taskmaster/docs/unit_testing_implementation.txt`
+   - **Progress**: TodoRead will show current testing tasks
+   - **Priority**: High - Continue unit testing implementation
+
+**If MCP servers are not connected, run:**
+```bash
+claude mcp add taskmaster-ai "npx -y --package=task-master-ai task-master-ai"
+claude mcp add context7 "npx @upstash/context7-mcp"
+```
+
 ## Project: SnapMeal
 
 SnapMeal is a meal logging Progressive Web App built with Next.js 15 that allows users to capture photos of their meals and estimate calories/macros using AI vision. The app uses Firebase for backend services and Google's Gemini AI for food analysis.
