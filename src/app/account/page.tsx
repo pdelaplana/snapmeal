@@ -1,5 +1,6 @@
 'use client';
 
+import { ChangePasswordDialog } from '@/components/auth/change-password-dialog';
 import AppLayout from '@/components/layout/app-layout';
 import {
   AlertDialog,
@@ -17,7 +18,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useAuth } from '@/context/auth-context';
 import { useDeleteAccountMutation } from '@/hooks/mutations';
 import { useToast } from '@/hooks/use-toast';
-import { Key, LogOut, ShieldAlert, Trash2, UserCog } from 'lucide-react';
+import { Key, LogOut, Trash2, UserCog } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export default function AccountManagementPage() {
@@ -103,11 +104,12 @@ export default function AccountManagementPage() {
           </CardHeader>
           <CardContent className='space-y-6'>
             <div className='space-y-3'>
-              <Button variant='outline' className='w-full justify-start' disabled>
-                <Key className='mr-3 h-5 w-5 text-muted-foreground' />
-                <span>Change Password</span>
-                <span className='ml-auto text-xs text-muted-foreground'>(Not available)</span>
-              </Button>
+              <ChangePasswordDialog>
+                <Button variant='outline' className='w-full justify-start'>
+                  <Key className='mr-3 h-5 w-5 text-muted-foreground' />
+                  <span>Change Password</span>
+                </Button>
+              </ChangePasswordDialog>
 
               <AlertDialog>
                 <AlertDialogTrigger asChild>
@@ -144,49 +146,31 @@ export default function AccountManagementPage() {
                 </AlertDialogContent>
               </AlertDialog>
             </div>
-
-            <div className='mt-6 border-t pt-6'>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant='destructive' className='w-full'>
-                    <LogOut className='mr-2 h-5 w-5' />
-                    Sign Out
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure you want to sign out?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      You will be returned to the login screen.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={logoutHandler}>Sign Out</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
-            <div className='mt-4'>
-              <Card variant='outlined_warning' className='border-yellow-500/50 bg-yellow-500/10'>
-                <CardContent className='p-4'>
-                  <div className='flex items-start'>
-                    <ShieldAlert className='mr-3 mt-1 h-5 w-5 text-yellow-600' />
-                    <div>
-                      <p className='text-sm font-medium text-yellow-700'>
-                        This is a mocked environment.
-                      </p>
-                      <p className='text-xs text-yellow-600'>
-                        Features like password change and account deletion are for demonstration
-                        purposes and are not functional.
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
           </CardContent>
         </Card>
+
+        <div className='mt-6'>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant='outline' className='w-full'>
+                <LogOut className='mr-2 h-5 w-5' />
+                Sign Out
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you sure you want to sign out?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  You will be returned to the login screen.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={logoutHandler}>Sign Out</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       </div>
     </AppLayout>
   );

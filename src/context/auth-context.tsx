@@ -9,6 +9,9 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   updateProfile,
+  updatePassword,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
 } from 'firebase/auth';
 import {
   type ReactNode,
@@ -26,6 +29,17 @@ const emailPasswordSchema = z.object({
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
 });
 
+const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, { message: 'Current password is required.' }),
+    newPassword: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
+    confirmPassword: z.string().min(1, { message: 'Password confirmation is required.' }),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
+  });
+
 function formatFirebaseError(error: AuthError) {
   switch (error.code) {
     case 'auth/email-already-in-use':
@@ -40,6 +54,8 @@ function formatFirebaseError(error: AuthError) {
     case 'auth/wrong-password':
     case 'auth/invalid-credential': // Covers both user-not-found and wrong-password in newer SDK versions
       return { form: ['Invalid email or password. Please try again.'] };
+    case 'auth/requires-recent-login':
+      return { currentPassword: ['Please verify your current password.'] };
     default:
       console.error('Firebase Auth Error:', error);
       return { form: ['An unexpected error occurred. Please try again.'] };
@@ -56,6 +72,9 @@ interface ProfileUpdate {
 interface AuthContextError {
   email?: string[];
   password?: string[];
+  currentPassword?: string[];
+  newPassword?: string[];
+  confirmPassword?: string[];
   form?: string[];
 }
 
@@ -72,6 +91,10 @@ interface AuthContextType {
   ) => Promise<{ success: boolean; email?: string; error?: AuthContextError }>;
   logout: () => Promise<boolean>;
   updateUserProfile: (profileData: ProfileUpdate) => Promise<boolean>;
+  changePassword: (
+    currentPassword: string,
+    newPassword: string,
+  ) => Promise<{ success: boolean; error?: AuthContextError }>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -81,6 +104,7 @@ const AuthContext = createContext<AuthContextType>({
   login: async () => ({ success: false, error: {} }),
   logout: async () => true,
   updateUserProfile: async () => false,
+  changePassword: async () => ({ success: false, error: {} }),
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -165,6 +189,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [user],
   );
 
+  const changePassword = useCallback(
+    async (
+      currentPassword: string,
+      newPassword: string,
+    ): Promise<{ success: boolean; error?: AuthContextError }> => {
+      if (!user || !user.email) {
+        return {
+          success: false,
+          error: { form: ['You must be logged in to change your password.'] },
+        };
+      }
+
+      try {
+        // Create credential for reauthentication
+        const credential = EmailAuthProvider.credential(user.email, currentPassword);
+
+        // Reauthenticate user with current password
+        await reauthenticateWithCredential(user, credential);
+
+        // Update password
+        await updatePassword(user, newPassword);
+
+        return { success: true };
+      } catch (error) {
+        const authError = error as AuthError;
+        return { success: false, error: formatFirebaseError(authError) };
+      }
+    },
+    [user],
+  );
+
   useEffect(() => {
     // Set Sentry user context when user state changes
     if (user) {
@@ -194,8 +249,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       logout,
       updateUserProfile,
+      changePassword,
     }),
-    [user, loading, register, login, logout, updateUserProfile],
+    [user, loading, register, login, logout, updateUserProfile, changePassword],
   );
 
   return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;
@@ -208,3 +264,7 @@ export const useAuth = () => {
   }
   return context; // Return only the stable context value
 };
+
+// Export schemas for use in components
+export { changePasswordSchema };
+export type { AuthContextError };
