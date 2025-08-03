@@ -97,7 +97,7 @@ interface AuthContextType {
   ) => Promise<{ success: boolean; error?: AuthContextError }>;
 }
 
-const AuthContext = createContext<AuthContextType>({
+export const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
   register: async () => ({ success: false, error: {} }),
