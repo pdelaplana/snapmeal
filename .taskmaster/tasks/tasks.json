@@ -1,0 +1,139 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Setup Vitest Testing Framework and Configuration",
+        "description": "Install and configure Vitest testing framework with TypeScript support, test utilities, and basic configuration for Next.js 15 integration",
+        "details": "Install vitest, @vitejs/plugin-react, jsdom, and related dependencies. Create vitest.config.ts with proper Next.js path mapping, TypeScript support, and jsdom environment. Configure test scripts in package.json. Set up basic test environment with proper globals and setup files. Ensure integration with existing Biome linting configuration.",
+        "testStrategy": "Verify configuration by creating a simple test file that imports and tests a basic utility function. Ensure TypeScript types are resolved correctly and Next.js path aliases work in test environment.",
+        "priority": "high",
+        "dependencies": [],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 2,
+        "title": "Create Test Infrastructure and Utilities",
+        "description": "Establish test utilities, mock factories, and shared testing helpers to support comprehensive testing across the application",
+        "details": "Create src/__tests__/setup.ts for global test configuration. Build src/__tests__/utils/ with custom render functions for React Testing Library, mock factories for Firebase services, and test data generators. Create src/__tests__/mocks/ with Firebase Auth, Firestore, and React Query mocks. Implement MSW setup for API mocking if needed.",
+        "testStrategy": "Test the utilities themselves by creating sample tests that use the custom render functions and mock factories. Verify Firebase mocks work correctly and React Query testing utilities function as expected.",
+        "priority": "high",
+        "dependencies": [
+          1
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 3,
+        "title": "Implement Authentication Context Testing",
+        "description": "Create comprehensive unit tests for AuthContext provider, hooks, and authentication state management",
+        "details": "Test src/context/auth-context.tsx including user state management, login/logout flows, and authentication persistence. Mock Firebase Auth methods and test context provider behavior. Test custom hooks that consume auth context. Verify proper error handling and loading states. Test authentication guards and protected route logic.",
+        "testStrategy": "Use React Testing Library to render components wrapped with AuthContext provider. Test user interactions like login/logout, verify state changes, and ensure proper cleanup. Mock Firebase Auth responses and test both success and error scenarios.",
+        "priority": "high",
+        "dependencies": [
+          2
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 4,
+        "title": "Test Change Password Feature Implementation",
+        "description": "Create comprehensive tests for the recently implemented Change Password dialog component and related functionality",
+        "details": "Test src/components/auth/change-password-dialog.tsx including form validation, submission handling, and error states. Test password confirmation logic, form state management, and user feedback. Mock Firebase updatePassword method and test success/error scenarios. Verify dialog open/close behavior and accessibility features.",
+        "testStrategy": "Render component with React Testing Library, simulate user interactions (typing passwords, form submission), verify form validation messages, test success/error states, and ensure proper dialog behavior and accessibility.",
+        "priority": "high",
+        "dependencies": [
+          2
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 5,
+        "title": "Test Authentication Forms and Validation",
+        "description": "Implement unit tests for login and registration forms including form validation, error handling, and submission flows",
+        "details": "Test src/components/auth/login-form.tsx and register-form.tsx including Zod schema validation, form state management, and submission handling. Test email/password validation, form error display, and loading states. Mock Firebase Auth createUser and signIn methods. Test form accessibility and user experience flows.",
+        "testStrategy": "Use React Hook Form testing patterns with React Testing Library. Test form validation by entering invalid data, verify error messages, test successful submission flows, and ensure proper form reset and loading state management.",
+        "priority": "medium",
+        "dependencies": [
+          3
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 6,
+        "title": "Test React Query Hooks and Mutations",
+        "description": "Create tests for React Query hooks, mutations, and data fetching logic including proper mocking and error handling",
+        "details": "Test hooks in src/hooks/mutations/ and src/hooks/queries/ including use-delete-account.ts, use-add-meal.ts, and use-fetch-meals-by-userid.ts. Mock server actions and Firebase operations. Test query invalidation, optimistic updates, and error handling. Verify proper loading states and cache management.",
+        "testStrategy": "Use React Query testing utilities to test hooks in isolation. Mock server actions and Firebase responses, test success/error scenarios, verify cache invalidation and optimistic updates work correctly, and ensure proper error boundary integration.",
+        "priority": "medium",
+        "dependencies": [
+          2
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 7,
+        "title": "Test Server Actions with Firebase Mocking",
+        "description": "Implement tests for Next.js server actions with comprehensive Firebase service mocking",
+        "details": "Test server actions in src/actions/ including meal CRUD operations, user management actions, and authentication flows. Mock Firebase Admin SDK, Firestore operations, and Firebase Storage. Test Zod validation, error handling, and proper data transformation. Verify proper authentication checks and authorization logic.",
+        "testStrategy": "Mock Firebase Admin SDK methods, test server actions in isolation, verify input validation with valid/invalid data, test error scenarios, and ensure proper data transformation and response formatting.",
+        "priority": "medium",
+        "dependencies": [
+          2
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 8,
+        "title": "Implement Component Testing for Critical UI Elements",
+        "description": "Create tests for critical UI components including meal forms, image capture, and core user interface elements",
+        "details": "Test src/components/meal/meal-form.tsx, src/components/shared/image-capture/index.tsx, and other critical UI components. Test component props, user interactions, conditional rendering, and integration with context providers. Mock camera APIs and file upload functionality. Test responsive behavior and accessibility features.",
+        "testStrategy": "Use React Testing Library to test component rendering, user interactions, prop changes, and conditional logic. Mock browser APIs (camera, file system), test accessibility features, and verify proper integration with parent components and context providers.",
+        "priority": "medium",
+        "dependencies": [
+          2
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 9,
+        "title": "Setup Code Coverage Reporting and Thresholds",
+        "description": "Configure code coverage reporting with appropriate thresholds and integration into development workflow",
+        "details": "Configure Vitest coverage reporting with c8 or Istanbul. Set coverage thresholds: 70% overall, 80% for business logic, 90% for authentication. Create coverage scripts in package.json. Configure coverage exclusions for test files, generated code, and configuration files. Set up coverage reporting format (HTML, JSON, text) for different environments.",
+        "testStrategy": "Run coverage reports on existing tests, verify thresholds are enforced, test coverage exclusions work correctly, and ensure coverage reports are generated in appropriate formats for both local development and CI/CD.",
+        "priority": "medium",
+        "dependencies": [
+          1
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 10,
+        "title": "Create Testing Documentation and Guidelines",
+        "description": "Develop comprehensive testing guidelines, examples, and documentation to support consistent testing practices",
+        "details": "Create testing documentation covering best practices, naming conventions, file organization, and testing patterns. Provide examples for testing React components, hooks, server actions, and context providers. Document mocking strategies, test utilities usage, and common testing scenarios. Create templates for different types of tests.",
+        "testStrategy": "Review documentation for clarity and completeness, ensure examples are accurate and runnable, verify guidelines are practical and achievable, and gather feedback from development team on documentation usefulness and clarity.",
+        "priority": "low",
+        "dependencies": [
+          8
+        ],
+        "status": "pending",
+        "subtasks": []
+      }
+    ],
+    "metadata": {
+      "created": "2025-08-03T02:16:27.166Z",
+      "updated": "2025-08-03T02:36:32.674Z",
+      "description": "Tasks for master context"
+    }
+  }
+}

@@ -8,7 +8,7 @@ describe('Vitest Setup', () => {
   it('should handle basic assertions', () => {
     const message = 'Hello SnapMeal Testing!';
     expect(message).toContain('SnapMeal');
-    expect(message).toHaveLength(22);
+    expect(message).toHaveLength(23);
   });
 
   it('should support async operations', async () => {

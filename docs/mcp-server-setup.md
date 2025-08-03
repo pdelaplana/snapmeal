@@ -26,24 +26,33 @@ npm install -g task-master-ai
 task-master --version
 ```
 
-### Step 2: Install Context7
+### Step 2: Configure Context7 MCP Server
+
+**Recommended Method: HTTP Transport (Most Reliable)**
+
+```bash
+# Add Context7 using remote HTTP server - no local installation needed
+claude mcp add --transport http context7 https://mcp.context7.com/mcp
+
+# Verify connection
+claude mcp list
+```
+
+**Alternative Method: Local Installation (If HTTP fails)**
 
 ```bash
 # Install Context7 MCP server globally
 npm install -g @upstash/context7-mcp
 
-# Verify installation (package should be available)
-npx @upstash/context7-mcp --help
+# Add as stdio server
+claude mcp add context7 "npx @upstash/context7-mcp"
 ```
 
-### Step 3: Configure MCP Servers in Claude Code
+### Step 3: Configure Taskmaster AI
 
 ```bash
 # Add Taskmaster AI as an MCP server
 claude mcp add taskmaster-ai "npx -y --package=task-master-ai task-master-ai"
-
-# Add Context7 as an MCP server
-claude mcp add context7 "npx @upstash/context7-mcp"
 
 # Verify both servers are configured and connected
 claude mcp list
@@ -53,7 +62,7 @@ claude mcp list
 ```
 Checking MCP server health...
 
-context7: npx @upstash/context7-mcp - ✓ Connected
+context7: https://mcp.context7.com/mcp (HTTP) - ✓ Connected
 taskmaster-ai: npx -y --package=task-master-ai task-master-ai - ✓ Connected
 ```
 
@@ -99,6 +108,11 @@ cat tasks.json
 - Gather real-time information for development decisions
 - Access external knowledge beyond Claude's training data
 - Investigate new technologies and frameworks
+
+**How to Use Context7:**
+- Add `use context7` to your prompts when you need current information
+- Example: "Create a Next.js 14 project with routing. use context7"
+- Works automatically once properly configured with HTTP transport
 
 **When to Use Context7:**
 - Need current information or latest updates
@@ -165,24 +179,80 @@ export UPSTASH_REDIS_REST_URL="your-redis-url"
 export UPSTASH_REDIS_REST_TOKEN="your-redis-token"
 ```
 
+## Working Configuration Summary
+
+### Current Status (Updated)
+
+**Context7**: ✅ **Working** - Uses HTTP transport
+```bash
+context7: https://mcp.context7.com/mcp (HTTP) - ✓ Connected
+```
+
+**Taskmaster AI**: ⚠️ **Functional but MCP Connection Issues**
+- Core functionality works via CLI: `task-master parse-prd`, `task-master list`
+- MCP stdio connection fails in Claude Code due to capability negotiation issues
+- Recommendation: Use direct CLI commands instead of MCP integration
+
+### Recommended Usage Pattern
+
+**For Context7 (Use in prompts):**
+```
+Create a Next.js component with latest patterns. use context7
+```
+
+**For Taskmaster AI (Use CLI commands):**
+```bash
+# Generate tasks from PRDs
+task-master parse-prd --input ".taskmaster/docs/your-prd.txt"
+
+# View generated tasks
+task-master list
+
+# Work with specific tasks
+task-master show 1
+task-master set-status --id=1 --status=in-progress
+```
+
 ## Troubleshooting
 
 ### Common Issues
 
-**1. MCP Server Not Connected**
+**1. Context7 MCP Connection Issues**
 ```bash
-# Check if packages are installed globally
+# Remove existing configuration
+claude mcp remove context7
+
+# Use HTTP transport (recommended and working)
+claude mcp add --transport http context7 https://mcp.context7.com/mcp
+
+# Verify connection
+claude mcp list
+```
+
+**2. Taskmaster AI MCP Connection Issues (Known Issue)**
+```bash
+# MCP stdio connection fails due to capability negotiation issues
+# Workaround: Use CLI directly instead of MCP
+
+# Verify CLI functionality works
+task-master --version
+task-master models
+
+# Use direct commands for functionality
+task-master parse-prd --input ".taskmaster/docs/unit_testing_implementation.txt"
+task-master list
+```
+
+**3. Taskmaster AI Installation Issues**
+```bash
+# Check if package is installed globally
 npm list -g task-master-ai
-npm list -g @upstash/context7-mcp
 
 # Reinstall if needed
-npm install -g task-master-ai @upstash/context7-mcp
+npm install -g task-master-ai
 
-# Remove and re-add MCP servers
-claude mcp remove taskmaster-ai
-claude mcp remove context7
-claude mcp add taskmaster-ai "npx -y --package=task-master-ai task-master-ai"
-claude mcp add context7 "npx @upstash/context7-mcp"
+# Test direct functionality
+task-master --version
 ```
 
 **2. Permission Issues**
@@ -269,20 +339,23 @@ For quick setup on new instances:
 #!/bin/bash
 # Quick MCP Server Setup Script
 
-echo "Installing Taskmaster AI and Context7..."
+echo "Setting up MCP servers..."
 
-# Install packages
-npm install -g task-master-ai @upstash/context7-mcp
+# Install Taskmaster AI globally
+npm install -g task-master-ai
 
 # Configure MCP servers
 claude mcp add taskmaster-ai "npx -y --package=task-master-ai task-master-ai"
-claude mcp add context7 "npx @upstash/context7-mcp"
+
+# Add Context7 using HTTP transport (recommended)
+claude mcp add --transport http context7 https://mcp.context7.com/mcp
 
 # Verify setup
 echo "Verifying setup..."
 claude mcp list
 
 echo "Setup complete! MCP servers are ready for use."
+echo "Use 'use context7' in prompts to access real-time information."
 ```
 
 Save this script as `setup-mcp-servers.sh` and run with `bash setup-mcp-servers.sh` for automated setup.
